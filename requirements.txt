@@ -1,0 +1,5 @@
+Development dependencies.
+
+networkx~=2.6.3
+simpy~=4.0.1
+matplotlib~=3.5.1
