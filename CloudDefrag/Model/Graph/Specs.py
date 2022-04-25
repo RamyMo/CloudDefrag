@@ -4,6 +4,9 @@ class Specs:
         self._memory = kwargs["memory"] if "memory" in kwargs else None
         self.storage = kwargs["storage"] if "storage" in kwargs else None
 
+    def __str__(self) -> str:
+        return f"[{self.specs.cpu}, {self.specs.memory}, {self.specs.storage}]"
+
     @property
     def cpu(self) -> int:
         return self._cpu
@@ -39,3 +42,13 @@ class Specs:
     @storage.deleter
     def storage(self):
         del self._storage
+
+    def increase_specs_by(self, extra_specs):
+        self.cpu += extra_specs.cpu
+        self.memory += extra_specs.memory
+        self.storage += extra_specs.storage
+
+    def decrease_specs_by(self, decreased_specs):
+        self.cpu -= decreased_specs.cpu
+        self.memory -= decreased_specs.memory
+        self.storage -= decreased_specs.storage

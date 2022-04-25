@@ -1,11 +1,16 @@
 from abc import ABC, abstractmethod
 
+from CloudDefrag.Logging.Logger import Logger
+
 
 class LinkSpecs:
 
     def __init__(self, **kwargs) -> None:
         self._bandwidth = kwargs["bandwidth"] if "bandwidth" in kwargs else None
         self._propagation_delay = kwargs["propagation_delay"] if "propagation_delay" in kwargs else None
+
+    def __str__(self) -> str:
+        return f"BW = {self._bandwidth}, Prop. Delay = {self._propagation_delay}"
 
     @property
     def bandwidth(self) -> float:
@@ -30,6 +35,9 @@ class Link(ABC):
         self._link_specs = kwargs["link_specs"] if "link_specs" in kwargs else None
         self._source = kwargs["source"] if "source" in kwargs else None
         self._target = kwargs["target"] if "target" in kwargs else None
+
+    def __str__(self) -> str:
+        return f"Link {self._source} to {self._target}"
 
     @property
     def link_specs(self) -> LinkSpecs:
@@ -61,6 +69,8 @@ class PhysicalLink(Link):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._hosted_virtual_links = kwargs["hosted_virtual_links"] if "hosted_virtual_links" in kwargs else []
+        self._weight = kwargs["weight"] if "weight" in kwargs else 0.0
+        Logger.log.info(f"Created a Physical Link from {self.source} to {self.target}")
 
     @property
     def hosted_virtual_links(self) -> list:
@@ -69,6 +79,14 @@ class PhysicalLink(Link):
     @hosted_virtual_links.setter
     def hosted_virtual_links(self, value: list):
         self._hosted_virtual_links = value
+
+    @property
+    def weight(self) -> float:
+        return self._weight
+
+    @weight.setter
+    def weight(self, value: float):
+        self._weight = value
 
     def add_virtual_link(self, value):
         self._hosted_virtual_links.append(value)
@@ -82,9 +100,7 @@ class VirtualLink(Link):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._hosting_physical_links = kwargs["hosting_physical_links"] if "hosting_physical_links" in kwargs else []
-
-    def __str__(self) -> str:
-        return str(self._source) + " => " + str(self._target)
+        Logger.log.info(f"Created a Virtual Link from {self.source} to {self.target}")
 
     @property
     def hosting_physical_links(self):

@@ -1,6 +1,5 @@
 from abc import ABC
 
-from CloudDefrag.Model.Graph.Node import Router
 from CloudDefrag.Model.Graph.Specs import Specs
 
 
@@ -40,9 +39,9 @@ class SCRequirement:
         self._e2e_delay = value
 
     @property
-    def gateway_router(self) -> Router:
+    def gateway_router(self):
         return self._gateway_router
 
     @gateway_router.setter
-    def gateway_router(self, value: Router):
+    def gateway_router(self, value):
         self._gateway_router = value

@@ -1,7 +1,14 @@
 #From https://github.com/navdeep-G/samplemod/blob/master/.gitignore
 
-#Notes File
+# Notes File
 notes.txt
+
+# Output Folder
+output/
+ 
+# Log file
+output/log.log
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

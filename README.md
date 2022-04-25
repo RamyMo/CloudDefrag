@@ -1,11 +1,11 @@
 # CloudDefrag
 
-Simulator for resource fragmentation and defragmentation in the cloud
+Simulator for resource fragmentation and defragmentation in the cloud.
 
 
 ## Authors
 
-- [@RamyMo](https://www.github.com/RamyMo)
+- [@RamyMo](https://www.github.com/RamyMo) (https://www.linkedin.com/in/ramymfouad/) Email: Ramy.Mohamed@carleton.ca
 
 
 ## Contributing
