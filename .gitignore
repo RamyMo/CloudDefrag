@@ -1,5 +1,10 @@
 #From https://github.com/navdeep-G/samplemod/blob/master/.gitignore
 
+#Idea Folder
+.idea/
+*.idea
+idea
+
 # Notes File
 notes.txt
 
@@ -8,6 +13,9 @@ output/
  
 # Log file
 output/log.log
+
+# Gurobi env file
+gurobi.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
