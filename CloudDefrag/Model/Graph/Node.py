@@ -55,6 +55,8 @@ class Server(PhysicalNode):
         self._hosted_virtual_machines = kwargs["hosted_virtual_machines"] if "hosted_virtual_machines" in kwargs \
             else []
         self._used_specs = Specs(cpu=0, memory=0, storage=0)
+        self._server_cost_coefficient = kwargs["server_cost_coefficient"] if "server_cost_coefficient" in kwargs \
+            else 1.0
         Logger.log.info(f"Created a server {self.node_name}. Specs: [CPUs: {self.specs.cpu},"
                         f" Memory: {self.specs.memory}(GBs), Storage: {self.specs.storage}(GBs)]")
 
@@ -79,6 +81,14 @@ class Server(PhysicalNode):
         available_memory = self.specs.memory - self.used_specs.memory
         available_storage = self.specs.storage - self.used_specs.storage
         return Specs(cpu=available_cpu, memory=available_memory, storage=available_storage)
+
+    @property
+    def server_cost_coefficient(self) -> float:
+        return self._server_cost_coefficient
+
+    @server_cost_coefficient.setter
+    def server_cost_coefficient(self, value: float):
+        self._server_cost_coefficient = value
 
     def can_server_host_vm(self, vm: Node) -> bool:
         required_cpu = vm.specs.cpu
@@ -119,6 +129,11 @@ class Server(PhysicalNode):
 
         else:
             Logger.log.warning(f"Can't Remove: Virtual Machine {vm.node_name} is not hosted at {self.node_name}!")
+
+    def reset(self):
+        hosted_vms = self._hosted_virtual_machines.copy()
+        for vm in hosted_vms:
+            self.remove_virtual_machine(vm)
 
 
 class Router(PhysicalNode):
@@ -164,6 +179,8 @@ class VirtualMachine(VirtualNode):
         self._attached_vlinks = kwargs["attached_vlinks"] if "attached_vlinks" in kwargs else []
         self._virtual_machines_link_map = kwargs["virtual_machines_link_map"] if "virtual_machines_link_map" \
                                                                                  in kwargs else {}
+        self._vm_revenue_coeff = kwargs["vm_revenue_coeff"] if "vm_revenue_coeff" in kwargs else 1.0
+        self._vm_migration_coeff = kwargs["vm_migration_coeff"] if "vm_migration_coeff" in kwargs else 1.0
         Logger.log.info(f"Created a virtual machine {self.node_name}. Requires: [CPUs: {self.specs.cpu},"
                         f" Memory: {self.specs.memory}(GBs), Storage: {self.specs.storage}(GBs)]")
 
@@ -206,6 +223,22 @@ class VirtualMachine(VirtualNode):
     @virtual_machines_link_map.setter
     def virtual_machines_link_map(self, value):
         self._virtual_machines_link_map = value
+
+    @property
+    def vm_revenue_coeff(self) -> float:
+        return self._vm_revenue_coeff
+
+    @vm_revenue_coeff.setter
+    def vm_revenue_coeff(self, value: float):
+        self._vm_revenue_coeff = value
+
+    @property
+    def vm_migration_coeff (self) -> float:
+        return self._vm_migration_coeff
+
+    @vm_migration_coeff .setter
+    def vm_migration_coeff (self, value: float):
+        self._vm_migration_coeff = value
 
     def connect_to_vm(self, vm, vlink: VirtualLink):
         if vm not in self._connected_virtual_machines:

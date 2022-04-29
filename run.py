@@ -30,8 +30,8 @@ def main():
     vm2 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name="vm2", node_label="Virtual Machine")
     vm3 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name="vm3", node_label="Virtual Machine")
     vm4 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name="vm4", node_label="Virtual Machine")
-    vm5 = VirtualMachine(specs=Specs(cpu=4, memory=4, storage=400), node_name="vm5", node_label="Virtual Machine")
-    vm6 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name="vm6", node_label="Virtual Machine")
+    vm5 = VirtualMachine(specs=Specs(cpu=4, memory=4, storage=400), node_name="vm5", node_label="Virtual Machine", vm_revenue_coeff=2)
+    vm6 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name="vm6", node_label="Virtual Machine", vm_revenue_coeff=2)
 
     # vlink1 = VirtualLink(source=vm1, target=vm2, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-3))
     # vm1.connect_to_vm(vm2, vlink1)
@@ -43,10 +43,11 @@ def main():
     s2.add_virtual_machine(vm4)
 
     vms = [vm1, vm2, vm3, vm4]
-    requests = [vm6]
+    requests = [vm5, vm6]
 
-    algo = HouILP(net, requests, hosted_vms=vms)
-
+    algo = HouILP(net, requests, hosted_vms=vms, model_name="dummy_example")
+    algo.solve(display_result=True)
+    algo.apply_result()
     # overlay network looks good
     # work on underlay network
 
