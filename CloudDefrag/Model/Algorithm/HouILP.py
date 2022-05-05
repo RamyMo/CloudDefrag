@@ -3,6 +3,7 @@ import itertools
 import gurobipy as gp
 from CloudDefrag.Model.Graph import Network
 from CloudDefrag.Model.Graph.Node import VirtualMachine
+from CloudDefrag.Logging.Logger import Logger
 
 
 class HouILP:
@@ -11,9 +12,9 @@ class HouILP:
         self._model = gp.Model(self._model_name)
         self._network = net
         self._requested_vms = requested_vms
-        self._servers = net.servers
-        self._servers_names = [server.node_name for server in net.servers]
-        self._servers_dict = {server.node_name: server for server in net.servers}
+        self._servers = net.get_servers
+        self._servers_names = [server.node_name for server in net.get_servers]
+        self._servers_dict = {server.node_name: server for server in net.get_servers}
         self._hosted_vms = kwargs["hosted_vms"] if "hosted_vms" in kwargs else []
         self._hosted_vms_names = [v.node_name for v in kwargs["hosted_vms"]] if "hosted_vms" in kwargs else []
         self._hosted_vms_dict = {v.node_name: v for v in self._hosted_vms}
@@ -26,6 +27,7 @@ class HouILP:
         self._requested_vms_servers_revenue_dict = {}  # Revenue of hosting VMs at servers dict
         self.__create_hosted_vms_dicts()
         self.__create_requested_vms_dicts()
+        Logger.log.info(f"Created an instance of HouILP algorithm for model {self._model_name}.")
 
         self._hosted_vms_combinations, self._hosted_vms_servers_migration_cost = \
             gp.multidict(self._hosted_vms_servers_migrate_cost_dict)
@@ -61,7 +63,6 @@ class HouILP:
         self.__create_single_host_constrs()
 
     def __create_decision_variables(self):
-        # TODO add decision variables of the assignment of all existing VMs after VM migrations (alpha)
         self._x = self._model.addVars(self._requested_vms_combinations, name="new_assign", vtype=gp.GRB.BINARY)
         self._y = self._model.addVars(self._hosted_vms_combinations, name="cur_assign", vtype=gp.GRB.BINARY)
 
@@ -69,11 +70,9 @@ class HouILP:
         revenue = self._x.prod(self._requested_vms_servers_revenue)
         cost = gp.quicksum((self._hosted_vms_servers_assign_dict[v, s] * (1 - self._y[v, s])) *
                            self._hosted_vms_dict[v].vm_migration_coeff for v, s in self._hosted_vms_combinations)
-        # TODO verify the cost in the objective
         self._model.setObjective(revenue - cost, gp.GRB.MAXIMIZE)
 
     def __create_resource_capacity_constrs(self):
-        # TODO modify the constraints to include both migration and assign
         # Resource Capacity Constraints
         server_cpu_constrs = self._model.addConstrs(
             (gp.quicksum((self._y[v, s] * self._hosted_vms_dict[v].specs.cpu) for v in
@@ -126,6 +125,7 @@ class HouILP:
     # Run optimization engine
     def solve(self, **kwargs):
         self._model.optimize()
+        Logger.log.info(f"Solving problem model {self._model_name} using HouILP...")
         if kwargs["display_result"]:
             self.display_result()
 
@@ -137,14 +137,18 @@ class HouILP:
                 print(f"{v.varName} = {v.x}")
         # Display optimal total matching score
         print('Total cost: ', self._model.objVal)
+        print(f"Runtime: {self._model.getAttr(gp.GRB.Attr.Runtime)} seconds" )
 
     def apply_result(self):
+        Logger.log.info(f"Apply the problem solution to the infrastructure...")
         # Start Migration
+        Logger.log.info(f"Start VM Migration...")
         for v, s in self._hosted_vms_combinations:
             if self._y[v, s].x == 1:
                 if self._hosted_vms_servers_assign_dict[v, s] != 1:
                     # Migrate v to s
                     self._hosted_vms_dict[v].migrate_to_host(self._servers_dict[s])
+        Logger.log.info(f"Assign new VMs...")
         # Assign new VMs
         for v, s in self._requested_vms_combinations:
             if self._x[v, s].x == 1:

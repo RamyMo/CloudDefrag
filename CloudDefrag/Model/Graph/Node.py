@@ -5,6 +5,8 @@ from CloudDefrag.Logging.Logger import Logger
 from CloudDefrag.Model.Graph.Link import VirtualLink
 from CloudDefrag.Model.Graph.Specs import Specs
 from CloudDefrag.Model.Graph.VNF import VNF
+import gurobipy as gp
+
 
 
 class Node(ABC):
@@ -60,8 +62,36 @@ class Server(PhysicalNode):
         Logger.log.info(f"Created a server {self.node_name}. Specs: [CPUs: {self.specs.cpu},"
                         f" Memory: {self.specs.memory}(GBs), Storage: {self.specs.storage}(GBs)]")
 
+        self._server_cpu_constr = None
+        self._server_memory_constr = None
+        self._server_storage_constr = None
+
     def __str__(self) -> str:
-        return f"Server {self.node_name}. Specs: [{self.specs.cpu}, {self.specs.memory}, {self.specs.storage}]"
+        return f"{self.node_name}"
+
+    @property
+    def server_cpu_constrs(self):
+        return self._server_cpu_constrs
+
+    @server_cpu_constrs.setter
+    def server_cpu_constrs(self, value):
+        self._server_cpu_constrs = value
+
+    @property
+    def server_memory_constrs(self):
+        return self._server_memory_constrs
+
+    @server_memory_constrs.setter
+    def server_memory_constrs(self, value):
+        self._server_memory_constrs = value
+
+    @property
+    def server_storage_constrs(self):
+        return self._server_storage_constrs
+
+    @server_storage_constrs.setter
+    def server_storage_constrs(self, value):
+        self._server_storage_constrs = value
 
     @property
     def hosted_virtual_machines(self) -> list:
@@ -144,7 +174,7 @@ class Router(PhysicalNode):
         Logger.log.info(f"Created a Router named {self.node_name}")
 
     def __str__(self) -> str:
-        return f"Router {self.node_name}"
+        return f"{self.node_name}"
 
     @property
     def is_gateway(self) -> bool:

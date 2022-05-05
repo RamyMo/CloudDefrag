@@ -11,9 +11,9 @@ class TestILP:
         self._model = gp.Model(self._model_name)
         self._network = net
         self._requested_vms = requested_vms
-        self._servers = net.servers
-        self._servers_names = [server.node_name for server in net.servers]
-        self._servers_dict = {server.node_name: server for server in net.servers}
+        self._servers = net.get_servers
+        self._servers_names = [server.node_name for server in net.get_servers]
+        self._servers_dict = {server.node_name: server for server in net.get_servers}
         self._hosted_vms = kwargs["hosted_vms"] if "hosted_vms" in kwargs else []
         self._hosted_vms_names = [v.node_name for v in kwargs["hosted_vms"]] if "hosted_vms" in kwargs else []
         self._requested_vms_names = [v.node_name for v in requested_vms]
