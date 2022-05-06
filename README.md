@@ -9,9 +9,8 @@ Simulator for Resource Fragmentation and Defragmentation in the Cloud.
 ***
 1. [Features](#features)
 2. [Technologies](#technologies)
-3. [Installation](#installation)
-4. [Authors](#authors)
-5. [License](#license)
+3. [Authors](#authors)
+4. [License](#license)
 
 ### Features
 ***
