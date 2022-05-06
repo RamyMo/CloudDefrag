@@ -3,7 +3,7 @@ from typing import List
 
 from CloudDefrag.Model.Graph.EnhancedGraph import EnhancedGraph
 from CloudDefrag.Model.Graph.Link import Link, PhysicalLink, VirtualLink
-from CloudDefrag.Model.Graph.Node import Node, Server, Router, VirtualMachine
+from CloudDefrag.Model.Graph.Node import Node, Server, Router, VirtualMachine, DummyVirtualMachine
 from CloudDefrag.Logging.Logger import Logger
 
 
@@ -100,14 +100,31 @@ class VirtualNetwork(Network):
                 vms.append(node)
         return vms
 
+    def get_vms_except_dummy(self) -> List[VirtualMachine]:
+        vms = []
+        for node in list(self.nodes):
+            if isinstance(node, DummyVirtualMachine):
+                continue
+            else:
+                vms.append(node)
+        return vms
+
+
+    def get_dummy_vm(self):
+        dummy_vm = None
+        for vm in self.get_vms():
+            if isinstance(vm, DummyVirtualMachine):
+                dummy_vm = vm
+                return dummy_vm
+        return dummy_vm
+
     def get_vms_dict(self):
         return {v.node_name: v for v in self.vms}
 
     def get_gateway_router(self) -> Router:
         router = None
         for node in self._network_nodes:
-            if isinstance(node, Router):
-                if node.is_gateway:
-                    router = node
-                    return router
+            if isinstance(node, DummyVirtualMachine):
+                router = node.gateway_router
+                return router
         return router

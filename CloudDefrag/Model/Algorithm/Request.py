@@ -14,11 +14,11 @@ class VMRequest(ABC):
     def get_new_request_id(cls):
         return cls._latest_request_id + 1
 
-    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, **kwargs) -> None:
+    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork,  **kwargs) -> None:
         self._virtual_net = virtual_net
         self._physical_net = physical_net
         self._e2e_delay = kwargs["e2e_delay"] if "e2e_delay" in kwargs else None
-        self._gateway_router = self._virtual_net.get_gateway_router()
+        self._gateway_router = virtual_net.get_gateway_router()
         VMRequest._latest_request_id += 1
         self._request_id = VMRequest._latest_request_id
         self._e2e_delay_constrs = None
@@ -63,6 +63,10 @@ class VMRequest(ABC):
     def gateway_router(self) -> Router:
         return self._gateway_router
 
+    @gateway_router.setter
+    def gateway_router(self, gw):
+        self._gateway_router = gw
+
 
 class HostedVMRequest(VMRequest):
 
@@ -104,7 +108,7 @@ class HostedVMRequest(VMRequest):
         self._hosted_vlinks_prop_delay = value
 
     def __create_hosted_vms_dicts(self):
-        hosted_vms_servers_combination = list(itertools.product(self._hosted_vms, self.physical_net.get_servers()))
+        hosted_vms_servers_combination = list(itertools.product(self._hosted_vms, self.physical_net.network_nodes))
         for i in hosted_vms_servers_combination:
             if i[0].host_server == i[1]:
                 self._hosted_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 1
@@ -243,7 +247,7 @@ class NewVMRequest(VMRequest):
 
     def __create_requested_vms_dicts(self):
         requested_vms_servers_combination = list(itertools.product(self._requested_vms,
-                                                                   self.physical_net.get_servers()))
+                                                                   self.physical_net.network_nodes))
         for i in requested_vms_servers_combination:
             self._requested_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 0
             self._requested_vms_servers_cost_dict[(i[0].node_name, i[1].node_name)] = i[1].server_cost_coefficient

@@ -5,7 +5,7 @@ import gurobipy as gp
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
 from CloudDefrag.Model.Graph import Network
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork
-from CloudDefrag.Model.Graph.Node import VirtualMachine, Router
+from CloudDefrag.Model.Graph.Node import VirtualMachine, Router, Server
 from CloudDefrag.Logging.Logger import Logger
 
 
@@ -74,11 +74,18 @@ class RamyILP:
 
         # Flow conservation constraint
         # Verifies that there will be a virtual link between each two consecutive VMs hosted on two different servers.
-        # self.__create_flow_conservation_constr()
+        self.__create_flow_conservation_constr()
 
         # VM Single Host Constraints
-        # Ensure that each VM is hosted by exactly one server
+        # Ensure that each VM is hosted by exactly one node
         self.__create_single_host_constrs()
+
+        # VM Single Server Constraints
+        # Ensure that each VM is hosted by exactly one server
+        self.__create_single_server_constrs()
+
+        # Ensure that dummy vms are placed only at their gateway routers
+        self.__create_dummy_vm_constrs()
 
     def __create_decision_variables(self):
         # New VMs Assignment variables
@@ -246,10 +253,6 @@ class RamyILP:
 
     def __create_flow_conservation_constr(self):
 
-        servers = self._servers
-        servers_names = self._servers_names
-        servers_dict = self._servers_dict
-
         nodes = self._nodes
         nodes_names = self._nodes_names
         nodes_dict = self._nodes_dict
@@ -265,23 +268,24 @@ class RamyILP:
 
                 # Continue if one end of the vlink is a gateway router
                 # TODO: Handle the flow conservation constraint for the gateway router
+                # TODO: Fix the error here
                 if isinstance(source, Router) or isinstance(target, Router):
                     if source.is_gateway or target.is_gateway:
                         continue
-                for n in servers_names:
+                for u in nodes_names:
+                    rhs = vm_vars[source.node_name, u] - vm_vars[target.node_name, u]
+                    lhs = 0
+                    for v in nodes_names:
+                        if u == v:
+                            continue
+                        else:
+                            var1 = f"({source.node_name},{target.node_name})",f"({u},{v})"
+                            var2 = f"({source.node_name},{target.node_name})",f"({v},{u})"
+                            lhs += gp.quicksum(link_vars[var1] - link_vars[var2] for v in nodes_names)
 
-                    rhs = vm_vars[source.node_name, n] - vm_vars[target.node_name, n]
-
-                    lhs = gp.quicksum()
-
+                    self._model.addConstr(lhs == abs(rhs), name=f"flow_cons_vlink_{vlink}")
 
                 # TODO: Fix Flow conservation constraint
-
-                # for host in self.
-                # gp.quicksum(link_vars[]
-                #     (link_vars[vlink, plink] *
-                #              plinks_dict[plink].link_specs.propagation_delay) for plink
-                #             in self._physical_links_names)
 
         for hosted_req in self._hosted_requests:
             pass
@@ -298,6 +302,39 @@ class RamyILP:
             hosted_vms_names = hosted_req.hosted_vms_names
             self._model.addConstrs((y.sum(v, '*') == 1 for v in hosted_vms_names)
                                    , name='hosted_vm_single_host')
+
+    def __create_single_server_constrs(self):
+        server_names = self._servers_names
+        for new_req in self._new_requests:
+            vars = new_req.new_vms_assign_vars
+            vms = new_req.vm_net.get_vms_except_dummy()
+            vms_names = [vm.node_name for vm in vms]
+            for vm in vms_names:
+                term = gp.quicksum(vars[vm, s] for s in server_names)
+                self._model.addConstr(term == 1, name=f'requested_vm_single_server[{vm}]')
+
+        for hosted_req in self._hosted_requests:
+            vars = hosted_req.hosted_vms_assign_vars
+            vms = hosted_req.vm_net.get_vms_except_dummy()
+            vms_names = [vm.node_name for vm in vms]
+            for vm in vms_names:
+                term = gp.quicksum(vars[vm, s] for s in server_names)
+                self._model.addConstr(term == 1, name=f'hosted_vm_single_server[{vm}]')
+
+    def __create_dummy_vm_constrs(self):
+        for new_req in self._new_requests:
+            vars = new_req.new_vms_assign_vars
+            gateway_router = new_req.gateway_router
+            dummy_vm = new_req.vm_net.get_dummy_vm()
+            dummy_var = vars[dummy_vm.node_name, gateway_router.node_name]
+            self._model.addConstr(dummy_var == 1, name=f"req{new_req.request_id}_dummy_vm")
+
+        for hosted_req in self._hosted_requests:
+            vars = hosted_req.hosted_vms_assign_vars
+            gateway_router = hosted_req.gateway_router
+            dummy_vm = hosted_req.vm_net.get_dummy_vm()
+            dummy_var = vars[dummy_vm.node_name, gateway_router.node_name]
+            self._model.addConstr(dummy_var == 1, name=f"req{hosted_req.request_id}_dummy_vm")
 
     def __create_requested_vms_dicts(self):
         self._requested_vms_servers_combination = list(itertools.product(self._requested_vms, self._servers))
@@ -358,4 +395,5 @@ class RamyILP:
             # Assign new VMs
             for v, s in requested_vms_combinations:
                 if x[v, s].x == 1:
-                    self._servers_dict[s].add_virtual_machine(requested_vms_dict[v])
+                    if isinstance(s, Server):
+                        self._servers_dict[s].add_virtual_machine(requested_vms_dict[v])

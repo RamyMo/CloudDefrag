@@ -8,7 +8,6 @@ from CloudDefrag.Model.Graph.VNF import VNF
 import gurobipy as gp
 
 
-
 class Node(ABC):
 
     def __init__(self, **kwargs):
@@ -49,6 +48,18 @@ class PhysicalNode(Node, ABC):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        # Cost coefficient for using the node as a server
+        self._server_cost_coefficient = kwargs["server_cost_coefficient"] if "server_cost_coefficient" in kwargs \
+            else 1.0
+
+    @property
+    def server_cost_coefficient(self) -> float:
+        return self._server_cost_coefficient
+
+    @server_cost_coefficient.setter
+    def server_cost_coefficient(self, value: float):
+        self._server_cost_coefficient = value
+
 
 class Server(PhysicalNode):
 
@@ -57,8 +68,7 @@ class Server(PhysicalNode):
         self._hosted_virtual_machines = kwargs["hosted_virtual_machines"] if "hosted_virtual_machines" in kwargs \
             else []
         self._used_specs = Specs(cpu=0, memory=0, storage=0)
-        self._server_cost_coefficient = kwargs["server_cost_coefficient"] if "server_cost_coefficient" in kwargs \
-            else 1.0
+
         Logger.log.info(f"Created a server {self.node_name}. Specs: [CPUs: {self.specs.cpu},"
                         f" Memory: {self.specs.memory}(GBs), Storage: {self.specs.storage}(GBs)]")
 
@@ -112,14 +122,6 @@ class Server(PhysicalNode):
         available_storage = self.specs.storage - self.used_specs.storage
         return Specs(cpu=available_cpu, memory=available_memory, storage=available_storage)
 
-    @property
-    def server_cost_coefficient(self) -> float:
-        return self._server_cost_coefficient
-
-    @server_cost_coefficient.setter
-    def server_cost_coefficient(self, value: float):
-        self._server_cost_coefficient = value
-
     def can_server_host_vm(self, vm: Node) -> bool:
         required_cpu = vm.specs.cpu
         required_memory = vm.specs.memory
@@ -171,6 +173,7 @@ class Router(PhysicalNode):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._is_gateway = kwargs["is_gateway"] if "is_gateway" in kwargs else None
+        self._hosted_dummy_vms = []
         Logger.log.info(f"Created a Router named {self.node_name}")
 
     def __str__(self) -> str:
@@ -183,6 +186,20 @@ class Router(PhysicalNode):
     @is_gateway.setter
     def is_gateway(self, value: bool):
         self._is_gateway = value
+
+    @property
+    def hosted_dummy_vms(self):
+        return self._hosted_dummy_vms
+
+    @hosted_dummy_vms.setter
+    def hosted_dummy_vms(self, value):
+        self._hosted_dummy_vms = value
+
+    def add_dummy_vm(self, vm):
+        self._hosted_dummy_vms.append(vm)
+
+    def remove_dummy_vm(self, vm):
+        self._hosted_dummy_vms.remove(vm)
 
 
 class Switch(PhysicalNode):
@@ -263,11 +280,11 @@ class VirtualMachine(VirtualNode):
         self._vm_revenue_coeff = value
 
     @property
-    def vm_migration_coeff (self) -> float:
+    def vm_migration_coeff(self) -> float:
         return self._vm_migration_coeff
 
-    @vm_migration_coeff .setter
-    def vm_migration_coeff (self, value: float):
+    @vm_migration_coeff.setter
+    def vm_migration_coeff(self, value: float):
         self._vm_migration_coeff = value
 
     def connect_to_vm(self, vm, vlink: VirtualLink):
@@ -287,6 +304,31 @@ class VirtualMachine(VirtualNode):
                         f" to {new_host.node_name}")
         self.host_server.remove_virtual_machine(self)
         new_host.add_virtual_machine(self)
+
+
+class DummyVirtualMachine(VirtualMachine):
+
+    def __init__(self, **kwargs):
+        super().__init__(specs=Specs(cpu=0, memory=0, storage=0), **kwargs)
+        self._gateway_router = kwargs["gateway_router"] if "gateway_router" in kwargs else None
+
+        if "gateway_router" in kwargs:
+            self._gateway_router = kwargs["gateway_router"]
+            self.host_server = self._gateway_router
+            self._gateway_router.add_dummy_vm(self)
+        else:
+            self._gateway_router = None
+
+        Logger.log.info(f"Created a dummy virtual machine {self.node_name}.")
+
+    @property
+    def gateway_router(self):
+        return self._gateway_router
+
+    @gateway_router.setter
+    def gateway_router(self, gw_router: Router):
+        self._gateway_router = gw_router
+        gw_router.add_dummy_vm(self)
 
 
 class VirtualRouter(VirtualNode):

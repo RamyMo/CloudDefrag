@@ -5,18 +5,13 @@ from CloudDefrag.Model.Algorithm.RamyILP import RamyILP
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
 from CloudDefrag.Model.Graph.Link import VirtualLink, LinkSpecs, PhysicalLink
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
-from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router
+from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router, DummyVirtualMachine
 from CloudDefrag.Model.Graph.Specs import Specs
 import matplotlib.pyplot as plt
 import networkx as nx
 
 
-
 def main():
-
-
-
-
     # Create network
     net = PhysicalNetwork(name="Net1")
     s1 = Server(specs=Specs(cpu=5, memory=5, storage=500), node_name="s1", node_label="Server")
@@ -31,13 +26,15 @@ def main():
 
                                                                                  propagation_delay=1E-6)))
     # Create request 1
+    vm0 = DummyVirtualMachine(gateway_router=w1, node_name=f"vm0_{VMRequest.get_new_request_id()}",
+                              node_label="Dummy Virtual Machine", vm_revenue_coeff=2)
     vm1 = VirtualMachine(specs=Specs(cpu=2, memory=2, storage=200), node_name=f"vm1_{VMRequest.get_new_request_id()}",
                          node_label="Virtual Machine", vm_revenue_coeff=2)
     vm2 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name=f"vm2_{VMRequest.get_new_request_id()}",
                          node_label="Virtual Machine", vm_revenue_coeff=2)
 
-    v_net1_nodes = [w1, vm1, vm2]
-    v_net1_edges = [VirtualLink(source=w1, target=vm1, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6)),
+    v_net1_nodes = [vm0, vm1, vm2]
+    v_net1_edges = [VirtualLink(source=vm0, target=vm1, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6)),
                     VirtualLink(source=vm1, target=vm2, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6))]
 
     v_net1 = VirtualNetwork(name=f"Request{VMRequest.get_new_request_id()}", network_nodes=v_net1_nodes,
@@ -47,16 +44,15 @@ def main():
     request1.e2e_delay = 10E-6
 
     # Create request 2
+    vm0 = DummyVirtualMachine(gateway_router=w1, node_name=f"vm0_{VMRequest.get_new_request_id()}",
+                              node_label="Dummy Virtual Machine", vm_revenue_coeff=2)
     vm1 = VirtualMachine(specs=Specs(cpu=2, memory=2, storage=200), node_name=f"vm1_{VMRequest.get_new_request_id()}",
                          node_label="Virtual Machine", vm_revenue_coeff=2)
     vm2 = VirtualMachine(specs=Specs(cpu=1, memory=1, storage=100), node_name=f"vm2_{VMRequest.get_new_request_id()}",
                          node_label="Virtual Machine", vm_revenue_coeff=2)
-
-    v_net1_nodes = [w1, vm1, vm2]
-    v_net1_edges = [VirtualLink(source=w1, target=vm1, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6)),
+    v_net1_nodes = [vm0, vm1, vm2]
+    v_net1_edges = [VirtualLink(source=vm0, target=vm1, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6)),
                     VirtualLink(source=vm1, target=vm2, link_specs=LinkSpecs(bandwidth=100, propagation_delay=1E-6))]
-
-
     v_net1 = VirtualNetwork(name=f"Request{VMRequest.get_new_request_id()}", network_nodes=v_net1_nodes,
                             network_edges=v_net1_edges)
 
@@ -64,19 +60,16 @@ def main():
     s1.add_virtual_machine(vm2)
     v_net1_edges[0].add_hosting_physical_link(net.network_edges[0])
 
-
-
     request2 = HostedVMRequest(v_net1, net)
     request2.e2e_delay = 10E-6
 
     hosted_requests = [request2]
-    requests = [request1]
+    new_requests = [request1]
 
-    algo = RamyILP(net, requests, hosted_requests)
+    algo = RamyILP(net, new_requests, hosted_requests)
     algo.model.update()
     algo.solve(display_result=True)
-    algo.apply_result()
-
+    # algo.apply_result()
 
     options = {
         'node_color': 'orange',
