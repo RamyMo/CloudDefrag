@@ -120,13 +120,27 @@ class HostedVMRequest(VMRequest):
     def __create_hosted_vlinks_dicts(self):
         hosted_vlinks_combination = list(itertools.product(self._hosted_vlinks, self.physical_net.get_links()))
         for i in hosted_vlinks_combination:
-            self._hosted_vlink_prop_delay_dict[(i[0].name, i[1].name)] = i[1].link_specs.propagation_delay
-            if i[1] in i[0].hosting_physical_links:
-                self._hosted_vlink_assign_dict[(i[0].name, i[1].name)] = 1
-                self._hosted_vlink_migrate_cost_dict[(i[0].name, i[1].name)] = 0
+            vl = i[0]  # vLink object
+            pl = i[1]  # pLink object
+            vl_name = i[0].name  # vLink name
+            pl_name = i[1].name  # pLink name as (source,target)
+            pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
+
+            self._hosted_vlink_prop_delay_dict[(vl_name, pl_name)] = pl.link_specs.propagation_delay
+            self._hosted_vlink_prop_delay_dict[(vl_name, pl_reverse_name)] = pl.link_specs.propagation_delay
+
+            if pl in vl.hosting_physical_links:
+                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 1
+                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
+
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = 0
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = 0
             else:
-                self._hosted_vlink_assign_dict[(i[0].name, i[1].name)] = 0
-                self._hosted_vlink_migrate_cost_dict[(i[0].name, i[1].name)] = i[0].vlink_migration_coeff
+                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 0
+                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
+
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = vl.vlink_migration_coeff
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = vl.vlink_migration_coeff
 
     @property
     def hosted_vlinks_names(self):
@@ -256,10 +270,22 @@ class NewVMRequest(VMRequest):
     def __create_requested_vlinks_dicts(self):
         requested_vlinks_combination = list(itertools.product(self._requested_vlinks, self.physical_net.get_links()))
         for i in requested_vlinks_combination:
-            self._requested_vlink_assign_dict[(i[0].name, i[1].name)] = 0
-            self._requested_vlink_cost_dict[(i[0].name, i[1].name)] = i[1].link_cost_coefficient
-            self._requested_vlink_revenue_dict[(i[0].name, i[1].name)] = i[0].vlink_revenue_coeff
-            self._requested_vlink_prop_delay_dict[(i[0].name, i[1].name)] = i[1].link_specs.propagation_delay
+            vl = i[0]                               # vLink object
+            pl = i[1]                               # pLink object
+            vl_name = i[0].name                     # vLink name
+            pl_name = i[1].name                     # pLink name as (source,target)
+            pl_reverse_name = i[1].reverse_name     # plink name as (target,source)
+            self._requested_vlink_assign_dict[(vl_name, pl_name)] = 0
+            self._requested_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
+
+            self._requested_vlink_cost_dict[(vl_name, pl_name)] = pl.link_cost_coefficient
+            self._requested_vlink_cost_dict[(vl_name, pl_reverse_name)] = pl.link_cost_coefficient
+
+            self._requested_vlink_revenue_dict[(vl_name, pl_name)] = vl.vlink_revenue_coeff
+            self._requested_vlink_revenue_dict[(vl_name, pl_reverse_name)] = vl.vlink_revenue_coeff
+
+            self._requested_vlink_prop_delay_dict[(vl_name, pl_name)] = pl.link_specs.propagation_delay
+            self._requested_vlink_prop_delay_dict[(vl_name, pl_reverse_name)] = pl.link_specs.propagation_delay
 
     @property
     def requested_vlinks_combinations(self):

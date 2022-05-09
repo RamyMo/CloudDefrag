@@ -8,6 +8,8 @@ class LinkSpecs:
     def __init__(self, **kwargs) -> None:
         self._bandwidth = kwargs["bandwidth"] if "bandwidth" in kwargs else None
         self._propagation_delay = kwargs["propagation_delay"] if "propagation_delay" in kwargs else None
+        self._available_bandwidth = self._bandwidth
+        self._used_bandwidth = 0
 
     def __str__(self) -> str:
         return f"BW = {self._bandwidth}, Prop. Delay = {self._propagation_delay}"
@@ -21,12 +23,29 @@ class LinkSpecs:
         self._bandwidth = value
 
     @property
+    def available_bandwidth(self):
+        return self._available_bandwidth
+
+    @property
+    def used_bandwidth(self):
+        return self._used_bandwidth
+
+    @property
     def propagation_delay(self) -> float:
         return self._propagation_delay
 
     @propagation_delay.setter
     def propagation_delay(self, value: float):
         self._propagation_delay = value
+
+    def increase_used_bandwidth_by(self, bw):
+        self._used_bandwidth += bw
+        self._available_bandwidth -= bw
+
+    def decrease_used_bandwidth_by(self, bw):
+        self._used_bandwidth -= bw
+        self._available_bandwidth += bw
+
 
 
 class Link(ABC):
@@ -39,9 +58,15 @@ class Link(ABC):
     def __str__(self) -> str:
         return f"Link {self._source} to {self._target}"
 
+    # Name of the links as ("source", "target")
     @property
     def name(self):
         return f"({self._source},{self._target})"
+
+    # Name of the links as ("target", "source")
+    @property
+    def reverse_name(self):
+        return f"({self._target},{self._source})"
 
     @property
     def name_tuple(self):
@@ -122,7 +147,7 @@ class PhysicalLink(Link):
             if self.link_specs.bandwidth >= virtual_link_bw and self.link_specs.propagation_delay <= \
                     virtual_link_prob_delay:
                 self._hosted_virtual_links.append(vLink)
-                self.link_specs.bandwidth -= virtual_link_bw
+                self.link_specs.increase_used_bandwidth_by(virtual_link_bw)
                 Logger.log.info(f"Virtual Link {vLink.name} is added to Physical Link {self.name}")
 
                 Logger.log.info(f"Available resources at Physical Link {self.name}: B.W = {self.link_specs.bandwidth}"
@@ -140,7 +165,7 @@ class PhysicalLink(Link):
         virtual_link_bw = vLink.link_specs.bandwidth
         if vLink in self.hosted_virtual_links:
             self._hosted_virtual_links.remove(vLink)
-            self.link_specs.bandwidth += virtual_link_bw
+            self.link_specs.decrease_used_bandwidth_by(virtual_link_bw)
             Logger.log.info(f"Virtual Link {vLink.name} is removed from Physical Link {self.name}.")
             Logger.log.info(f"Available resources at Physical Link {self.name}: B.W = {self.link_specs.bandwidth}"
                             f" MBs, Prop. Delay = {self.link_specs.propagation_delay} s")
@@ -187,7 +212,7 @@ class VirtualLink(Link):
         return self._hosting_physical_links
 
     def add_hosting_physical_link(self, physical_link: PhysicalLink):
-        avail_bw = physical_link.link_specs.bandwidth
+        avail_bw = physical_link.link_specs.available_bandwidth
         req_bw = self.link_specs.bandwidth
         avail_prop_delay = physical_link.link_specs.propagation_delay
         req_prop_delay = self.link_specs.propagation_delay
