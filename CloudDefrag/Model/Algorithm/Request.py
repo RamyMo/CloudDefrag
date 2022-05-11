@@ -14,14 +14,27 @@ class VMRequest(ABC):
     def get_new_request_id(cls):
         return cls._latest_request_id + 1
 
-    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork,  **kwargs) -> None:
+    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, gateway_router: Router,
+                 **kwargs) -> None:
         self._virtual_net = virtual_net
         self._physical_net = physical_net
         self._e2e_delay = kwargs["e2e_delay"] if "e2e_delay" in kwargs else None
-        self._gateway_router = virtual_net.get_gateway_router()
+        self._request_type = kwargs["request_type"] if "request_type" in kwargs else None
+        self._gateway_router = gateway_router
+        virtual_net.get_dummy_vm().gateway_router = self._gateway_router
+
         VMRequest._latest_request_id += 1
         self._request_id = VMRequest._latest_request_id
         self._e2e_delay_constrs = None
+
+
+    @property
+    def request_type(self) -> int:
+        return self._request_type
+
+    @request_type.setter
+    def request_type(self, value: int):
+        self._request_type = value
 
     @property
     def e2e_delay_constr(self):
@@ -70,8 +83,9 @@ class VMRequest(ABC):
 
 class HostedVMRequest(VMRequest):
 
-    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, **kwargs) -> None:
-        super().__init__(virtual_net, physical_net, **kwargs)
+    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, gateway_router: Router,
+                 **kwargs) -> None:
+        super().__init__(virtual_net, physical_net, gateway_router, **kwargs)
 
         # VMs
         self._hosted_vms = self._virtual_net.get_vms()
@@ -190,10 +204,12 @@ class HostedVMRequest(VMRequest):
     def hosted_vlinks_dict(self):
         return self._hosted_vlinks_dict
 
+
 class NewVMRequest(VMRequest):
 
-    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, **kwargs) -> None:
-        super().__init__(virtual_net, physical_net, **kwargs)
+    def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, gateway_router: Router,
+                 **kwargs) -> None:
+        super().__init__(virtual_net, physical_net, gateway_router, **kwargs)
 
         # VMs
         self._requested_vms = self._virtual_net.get_vms()
@@ -208,7 +224,6 @@ class NewVMRequest(VMRequest):
         _, self._requested_vms_servers_revenue = gp.multidict(self._requested_vms_servers_revenue_dict)
         # New VMs Assignment variables
         self._x = None
-
 
         # vLinks
         self._requested_vlinks = self._virtual_net.get_links()
@@ -233,6 +248,7 @@ class NewVMRequest(VMRequest):
     @requested_vlinks_prop_delay.setter
     def requested_vlinks_prop_delay(self, value):
         self._requested_vlinks_prop_delay = value
+
     @property
     def requested_vlinks_names(self):
         return self._requested_vlinks_names
@@ -240,9 +256,11 @@ class NewVMRequest(VMRequest):
     @property
     def requested_vlinks_dict(self):
         return self._requested_vlinks_dict
+
     @property
     def requested_vlinks_cost(self):
         return self._requested_vlinks_cost
+
     @property
     def new_vms_assign_vars(self):
         return self._x
@@ -270,11 +288,11 @@ class NewVMRequest(VMRequest):
     def __create_requested_vlinks_dicts(self):
         requested_vlinks_combination = list(itertools.product(self._requested_vlinks, self.physical_net.get_links()))
         for i in requested_vlinks_combination:
-            vl = i[0]                               # vLink object
-            pl = i[1]                               # pLink object
-            vl_name = i[0].name                     # vLink name
-            pl_name = i[1].name                     # pLink name as (source,target)
-            pl_reverse_name = i[1].reverse_name     # plink name as (target,source)
+            vl = i[0]  # vLink object
+            pl = i[1]  # pLink object
+            vl_name = i[0].name  # vLink name
+            pl_name = i[1].name  # pLink name as (source,target)
+            pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
             self._requested_vlink_assign_dict[(vl_name, pl_name)] = 0
             self._requested_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
 
@@ -290,6 +308,7 @@ class NewVMRequest(VMRequest):
     @property
     def requested_vlinks_combinations(self):
         return self._requested_vlinks_combinations
+
     @property
     def requested_vms_combinations(self):
         return self._requested_vms_combinations

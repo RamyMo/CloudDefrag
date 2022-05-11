@@ -380,6 +380,7 @@ class RamyILP:
         print(f"Runtime: {self._model.getAttr(gp.GRB.Attr.Runtime)} seconds")
 
     def apply_result(self):
+        # TODO: Fix the bug in apply_result
         Logger.log.info(f"Apply the problem solution to the infrastructure...")
 
         # Start Migration

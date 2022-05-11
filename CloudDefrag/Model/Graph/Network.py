@@ -37,8 +37,21 @@ class Network(EnhancedGraph, ABC):
     def get_node_dict(self):
         return {v.node_name: v for v in self.network_nodes}
 
+    def get_node_by_name(self, name):
+        return self.get_node_dict()[name]
+
     def get_links_dict(self):
-        return {l.name: l for l in self.get_links()}
+        node_dict = {}
+        for link in self.get_links():
+            node_dict[link.name] = link
+        return node_dict
+
+    def get_links_dict_full_with_reverse_names(self):
+        node_dict = {}
+        for link in self.get_links():
+            node_dict[link.name] = link
+            node_dict[link.reverse_name] = link
+        return node_dict
 
     def add_network_node(self, node: Node, **kwargs):
         self._network_nodes.append(node)
@@ -108,7 +121,6 @@ class VirtualNetwork(Network):
             else:
                 vms.append(node)
         return vms
-
 
     def get_dummy_vm(self):
         dummy_vm = None

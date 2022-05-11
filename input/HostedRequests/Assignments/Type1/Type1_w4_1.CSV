@@ -1,0 +1,8 @@
+VM or vLink?,Index,Source,Target,Host
+VM,0,NA,NA,w4
+VM,1,NA,NA,s10
+VM,2,NA,NA,s10
+VM,3,NA,NA,s10
+vLink,0,0,1,"(w4,s10)"
+vLink,1,1,2,NA
+vLink,2,2,3,NA
