@@ -17,9 +17,10 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer
 
 
 def main():
-    # Create network
+    # Create the network
     net = PhysicalNetwork(name="Net1")
     input_parser = InputParser(net)
+    # Draw the network topology
     net_visual = NetworkVisualizer(net)
     net_visual.plot()
 

@@ -150,7 +150,7 @@ class PhysicalLink(Link):
                 self.link_specs.increase_used_bandwidth_by(virtual_link_bw)
                 Logger.log.info(f"Virtual Link {vLink.name} is added to Physical Link {self.name}")
 
-                Logger.log.info(f"Available resources at Physical Link {self.name}: B.W = {self.link_specs.bandwidth}"
+                Logger.log.info(f"Available resources at Physical Link {self.name}: B.W = {self.link_specs.available_bandwidth}"
                                 f" MBs, Prop. Delay = {self.link_specs.propagation_delay} s")
                 return
             # Physical Link cannot host

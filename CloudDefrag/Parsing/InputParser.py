@@ -10,6 +10,8 @@ from CloudDefrag.Model.Graph.Specs import Specs
 
 class InputParser:
     def __init__(self, net: PhysicalNetwork, **kwargs) -> None:
+
+        # Parse Network Nodes and Connections
         self._net = net
         self._network_nodes_file = kwargs["network_nodes_file"] if "network_nodes_file" in kwargs else \
             "input/01-NetworkNodes.csv"
@@ -238,42 +240,54 @@ class InputParser:
                 if req.request_type == 1:
                     file_name = "input/HostedRequests/Assignments/Type1/Type1_w2_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 2:
                     file_name = "input/HostedRequests/Assignments/Type2/Type2_w2_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 3:
                     file_name = "input/HostedRequests/Assignments/Type3/Type3_w2_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
             elif gateway_router_name == "w3":
                 if req.request_type == 1:
                     file_name = "input/HostedRequests/Assignments/Type1/Type1_w3_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 2:
                     file_name = "input/HostedRequests/Assignments/Type2/Type2_w3_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 3:
                     file_name = "input/HostedRequests/Assignments/Type3/Type3_w3_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
             elif gateway_router_name == "w4":
                 if req.request_type == 1:
                     file_name = "input/HostedRequests/Assignments/Type1/Type1_w4_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 2:
                     file_name = "input/HostedRequests/Assignments/Type2/Type2_w4_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 3:
                     file_name = "input/HostedRequests/Assignments/Type3/Type3_w4_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
             elif gateway_router_name == "w5":
                 if req.request_type == 1:
                     file_name = "input/HostedRequests/Assignments/Type1/Type1_w5_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 2:
                     file_name = "input/HostedRequests/Assignments/Type2/Type2_w5_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
                 if req.request_type == 3:
                     file_name = "input/HostedRequests/Assignments/Type3/Type3_w5_1.CSV"
                     self.__parse_request_assignment(file_name, net_link_dict, net_node_dict, vlinks, vms)
+                    req.update_dicts()
 
     def __parse_request_assignment(self, file_name, net_link_dict, net_node_dict, vlinks, vms):
         with open(file_name, "r") as file:

@@ -5,7 +5,7 @@ import gurobipy as gp
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
 from CloudDefrag.Model.Graph import Network
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork
-from CloudDefrag.Model.Graph.Node import VirtualMachine, Router, Server
+from CloudDefrag.Model.Graph.Node import VirtualMachine, Router, Server, DummyVirtualMachine
 from CloudDefrag.Logging.Logger import Logger
 
 
@@ -123,9 +123,10 @@ class RamyILP:
             vlink_assign_dict = hosted_req.hosted_vlink_assign_dict
             vl = hosted_req.hosted_vlinks_assign_vars
             vlinks_dict = hosted_req.hosted_vlinks_dict
+            vlink_migrate_cost_dict = hosted_req.hosted_vlink_migrate_cost_dict
             vlinks_combination = hosted_req.hosted_vlinks_combinations
             vlink_migration_cost = gp.quicksum((vlink_assign_dict[v, s] * (1 - vl[v, s])) *
-                                               vlinks_dict[v].vlink_migration_coeff for v, s in vlinks_combination)
+                                               vlink_migrate_cost_dict[v, s] for v, s in vlinks_combination)
 
             cost += vm_migration_cost + vlink_migration_cost
 
@@ -370,40 +371,96 @@ class RamyILP:
             self.display_result()
 
     def display_result(self):
+        # Model properties:
+        print(f"Number of Decision Variables: {len(self._model.getVars())}")
+        print(f"Number of Constraints: {len(self._model.getConstrs())}")
         # Display optimal values of decision variables
-        print("Decision Variables:")
+        print("\nDecision Variables:")
         for v in self._model.getVars():
             if v.x > 1e-6:
                 print(f"{v.varName} = {v.x}")
         # Display optimal total matching score
-        print('Total cost: ', self._model.objVal)
+        print('\nTotal cost: ', self._model.objVal)
         print(f"Runtime: {self._model.getAttr(gp.GRB.Attr.Runtime)} seconds")
 
     def apply_result(self):
-        # TODO: Fix the bug in apply_result
+        net_node_dict = self._network.get_node_dict()
+
         Logger.log.info(f"Apply the problem solution to the infrastructure...")
 
         # Start Migration
         Logger.log.info(f"Start VM Migration...")
 
         for hosted_req in self._hosted_requests:
+            # VMs
             hosted_vms_combinations = hosted_req.hosted_vms_combinations
             y = hosted_req.hosted_vms_assign_vars
             hosted_vms_servers_assign_dict = hosted_req.hosted_vms_servers_assign_dict
             hosted_vms_dict = hosted_req.hosted_vms_dict
             for v, s in hosted_vms_combinations:
+                if isinstance(hosted_vms_dict[v], DummyVirtualMachine):
+                    continue
                 if y[v, s].x == 1:
                     if hosted_vms_servers_assign_dict[v, s] != 1:
                         # Migrate v to s
                         hosted_vms_dict[v].migrate_to_host(self._servers_dict[s])
+            # vLinks
+            hosted_vlinks_objects_combination = hosted_req.hosted_vlinks_objects_combination
+            hosted_vlink_assign_dict = hosted_req.hosted_vlink_assign_dict
+            hosted_vlinks_dict = hosted_req.hosted_vlinks_dict
+            vL = hosted_req.hosted_vlinks_assign_vars
+            for i in hosted_vlinks_objects_combination:
+                vl = i[0]  # vLink object
+                pl = i[1]  # pLink object
+                vl_name = i[0].name  # vLink name
+                pl_name = i[1].name  # pLink name as (source,target)
+                pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
+                decision_variable = vL[vl_name, pl_name]
+
+                if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
+                    is_pl_in_solution = True    # The physical link is selected in the new solution
+                else:
+                    is_pl_in_solution = False   # The physical link is not selected in the new solution
+
+                if hosted_vlink_assign_dict[(vl_name, pl_name)] == 1 \
+                        or hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] == 1:
+                    was_pl_in_old_assign = True     # The physical link was selected in the old assign
+                else:
+                    was_pl_in_old_assign = False    # The physical link was not selected in the old assign
+
+                if is_pl_in_solution and not was_pl_in_old_assign:
+                    # Add pl as a hosting link for the vl
+                    vl.add_hosting_physical_link(pl)
+                elif not is_pl_in_solution and was_pl_in_old_assign:
+                    # Remove pl from being a hosting link for the vl
+                    vl.remove_hosting_physical_link(pl)
 
         Logger.log.info(f"Assign new VMs...")
         for new_req in self._new_requests:
             requested_vms_combinations = new_req.requested_vms_combinations
             x = new_req.new_vms_assign_vars
             requested_vms_dict = new_req.requested_vms_dict
+
             # Assign new VMs
             for v, s in requested_vms_combinations:
+                vm = requested_vms_dict[v]
+                server = net_node_dict[s]
+                if isinstance(vm, DummyVirtualMachine):
+                    continue
                 if x[v, s].x == 1:
-                    if isinstance(s, Server):
-                        self._servers_dict[s].add_virtual_machine(requested_vms_dict[v])
+                    if isinstance(server, Server):
+                        server.add_virtual_machine(vm)
+
+            # Assign new vLinks
+            requested_vlinks_objects_combination = new_req.requested_vlinks_object_combinations
+            vL = new_req.new_vlinks_assign_vars
+            for i in requested_vlinks_objects_combination:
+                vl = i[0]  # vLink object
+                pl = i[1]  # pLink object
+                vl_name = i[0].name  # vLink name
+                pl_name = i[1].name  # pLink name as (source,target)
+                pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
+                if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
+                    vl.add_hosting_physical_link(pl)
+
+

@@ -94,6 +94,7 @@ class HostedVMRequest(VMRequest):
         self._hosted_vms_servers_assign_dict = {}  # Assignment of all existing VMs
         self._hosted_vms_servers_migrate_cost_dict = {}  # Migration cost
         self.__create_hosted_vms_dicts()
+        self.__hosted_vms_servers_objects_combination = None
         self._hosted_vms_combinations, self._hosted_vms_servers_migration_cost = \
             gp.multidict(self._hosted_vms_servers_migrate_cost_dict)
         # Hosted VMs Assignment variables after migration
@@ -106,7 +107,9 @@ class HostedVMRequest(VMRequest):
         self._hosted_vlink_assign_dict = {}  # Assignment of all existing vlinks
         self._hosted_vlink_migrate_cost_dict = {}
         self._hosted_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
+
         self.__create_hosted_vlinks_dicts()
+        self.__hosted_vlinks_objects_combination = None
         self._hosted_vlinks_combinations, self._hosted_vlinks_migration_cost = \
             gp.multidict(self._hosted_vlink_migrate_cost_dict)
         _, self._hosted_vlinks_prop_delay = gp.multidict(self._hosted_vlink_prop_delay_dict)
@@ -120,41 +123,6 @@ class HostedVMRequest(VMRequest):
     @hosted_vlinks_prop_delay.setter
     def hosted_vlinks_prop_delay(self, value):
         self._hosted_vlinks_prop_delay = value
-
-    def __create_hosted_vms_dicts(self):
-        hosted_vms_servers_combination = list(itertools.product(self._hosted_vms, self.physical_net.network_nodes))
-        for i in hosted_vms_servers_combination:
-            if i[0].host_server == i[1]:
-                self._hosted_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 1
-                self._hosted_vms_servers_migrate_cost_dict[(i[0].node_name, i[1].node_name)] = 0
-            else:
-                self._hosted_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 0
-                self._hosted_vms_servers_migrate_cost_dict[(i[0].node_name, i[1].node_name)] = i[0].vm_migration_coeff
-
-    def __create_hosted_vlinks_dicts(self):
-        hosted_vlinks_combination = list(itertools.product(self._hosted_vlinks, self.physical_net.get_links()))
-        for i in hosted_vlinks_combination:
-            vl = i[0]  # vLink object
-            pl = i[1]  # pLink object
-            vl_name = i[0].name  # vLink name
-            pl_name = i[1].name  # pLink name as (source,target)
-            pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
-
-            self._hosted_vlink_prop_delay_dict[(vl_name, pl_name)] = pl.link_specs.propagation_delay
-            self._hosted_vlink_prop_delay_dict[(vl_name, pl_reverse_name)] = pl.link_specs.propagation_delay
-
-            if pl in vl.hosting_physical_links:
-                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 1
-                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
-
-                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = 0
-                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = 0
-            else:
-                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 0
-                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
-
-                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = vl.vlink_migration_coeff
-                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = vl.vlink_migration_coeff
 
     @property
     def hosted_vlinks_names(self):
@@ -181,6 +149,10 @@ class HostedVMRequest(VMRequest):
         return self._hosted_vms_combinations
 
     @property
+    def hosted_vms_servers_objects_combination(self):
+        return self.__hosted_vms_servers_objects_combination
+
+    @property
     def hosted_vms_servers_assign_dict(self):
         return self._hosted_vms_servers_assign_dict
 
@@ -197,6 +169,10 @@ class HostedVMRequest(VMRequest):
         return self._hosted_vlinks_combinations
 
     @property
+    def hosted_vlinks_objects_combination(self):
+        return self.__hosted_vlinks_objects_combination
+
+    @property
     def hosted_vlink_assign_dict(self):
         return self._hosted_vlink_assign_dict
 
@@ -204,6 +180,68 @@ class HostedVMRequest(VMRequest):
     def hosted_vlinks_dict(self):
         return self._hosted_vlinks_dict
 
+    @property
+    def hosted_vlink_migrate_cost_dict(self):
+        return self._hosted_vlink_migrate_cost_dict
+
+    def __create_hosted_vms_dicts(self):
+        hosted_vms_servers_combination = list(itertools.product(self._hosted_vms, self.physical_net.network_nodes))
+        self.__hosted_vms_servers_objects_combination = hosted_vms_servers_combination
+        for i in hosted_vms_servers_combination:
+            if i[0].host_server == i[1]:
+                self._hosted_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 1
+                self._hosted_vms_servers_migrate_cost_dict[(i[0].node_name, i[1].node_name)] = 0
+            else:
+                self._hosted_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 0
+                self._hosted_vms_servers_migrate_cost_dict[(i[0].node_name, i[1].node_name)] = i[0].vm_migration_coeff
+
+    def __create_hosted_vlinks_dicts(self):
+        hosted_vlinks_combination = list(itertools.product(self._hosted_vlinks, self.physical_net.get_links()))
+        self.__hosted_vlinks_objects_combination = hosted_vlinks_combination
+        for i in hosted_vlinks_combination:
+            vl = i[0]  # vLink object
+            pl = i[1]  # pLink object
+            vl_name = i[0].name  # vLink name
+            pl_name = i[1].name  # pLink name as (source,target)
+            pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
+
+            self._hosted_vlink_prop_delay_dict[(vl_name, pl_name)] = pl.link_specs.propagation_delay
+            self._hosted_vlink_prop_delay_dict[(vl_name, pl_reverse_name)] = pl.link_specs.propagation_delay
+
+            if pl in vl.hosting_physical_links:
+                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 1
+                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
+
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = 0
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = 0
+            else:
+                self._hosted_vlink_assign_dict[(vl_name, pl_name)] = 0
+                self._hosted_vlink_assign_dict[(vl_name, pl_reverse_name)] = 0
+
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_name)] = vl.vlink_migration_coeff
+                self._hosted_vlink_migrate_cost_dict[(vl_name, pl_reverse_name)] = vl.vlink_migration_coeff
+
+    def update_dicts(self):
+        # VMs
+        self._hosted_vms_servers_assign_dict = {}  # Assignment of all existing VMs
+        self._hosted_vms_servers_migrate_cost_dict = {}  # Migration cost
+        self.__create_hosted_vms_dicts()
+        self._hosted_vms_combinations, self._hosted_vms_servers_migration_cost = \
+            gp.multidict(self._hosted_vms_servers_migrate_cost_dict)
+        # Hosted VMs Assignment variables after migration
+        self._y = None
+
+        # vLinks
+        self._hosted_vlink_assign_dict = {}  # Assignment of all existing vlinks
+        self._hosted_vlink_migrate_cost_dict = {}
+        self._hosted_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
+
+        self.__create_hosted_vlinks_dicts()
+        self._hosted_vlinks_combinations, self._hosted_vlinks_migration_cost = \
+            gp.multidict(self._hosted_vlink_migrate_cost_dict)
+        _, self._hosted_vlinks_prop_delay = gp.multidict(self._hosted_vlink_prop_delay_dict)
+        # Hosted vLinks Assignment variables after migration
+        self._vL = None
 
 class NewVMRequest(VMRequest):
 
@@ -233,6 +271,7 @@ class NewVMRequest(VMRequest):
         self._requested_vlink_cost_dict = {}  # Cost of assignment of all new vlinks
         self._requested_vlink_revenue_dict = {}  # Revenue of assignment of all new vlinks
         self._requested_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
+        self.__requested_vlinks_object_combinations = None
         self.__create_requested_vlinks_dicts()
         self._requested_vlinks_combinations, self._requested_vlinks_cost = \
             gp.multidict(self._requested_vlink_cost_dict)
@@ -287,6 +326,7 @@ class NewVMRequest(VMRequest):
 
     def __create_requested_vlinks_dicts(self):
         requested_vlinks_combination = list(itertools.product(self._requested_vlinks, self.physical_net.get_links()))
+        self.__requested_vlinks_object_combinations = requested_vlinks_combination
         for i in requested_vlinks_combination:
             vl = i[0]  # vLink object
             pl = i[1]  # pLink object
@@ -308,6 +348,10 @@ class NewVMRequest(VMRequest):
     @property
     def requested_vlinks_combinations(self):
         return self._requested_vlinks_combinations
+
+    @property
+    def requested_vlinks_object_combinations(self):
+        return self.__requested_vlinks_object_combinations
 
     @property
     def requested_vms_combinations(self):
