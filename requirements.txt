@@ -4,3 +4,5 @@ networkx~=2.6.3
 simpy~=4.0.1
 matplotlib~=3.5.1
 gurobipy~=9.5.0
+numpy~=1.22.0
+gym~=0.21.0

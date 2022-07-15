@@ -1,3 +1,4 @@
+import math
 from abc import ABC
 from typing import List
 
@@ -77,6 +78,26 @@ class PhysicalNetwork(Network):
         super().__init__(**kwargs)
         Logger.log.info(f"Created physical network {self.name}")
 
+    @property
+    def compute_index(self):
+        x = 0
+        y = 0
+        for server in self.get_servers():
+            x += server.weight * server.node_score
+            y += server.weight
+        score = math.ceil(x / y)
+        return score
+
+    @property
+    def communication_index(self):
+        x = 0
+        y = 0
+        for link in self.get_links():
+            x += link.weight * link.link_score
+            y += link.weight
+        score = math.ceil(x / y)
+        return score
+
     def get_servers(self) -> List[Server]:
         servers = []
         for node in list(self.nodes):
@@ -98,6 +119,7 @@ class PhysicalNetwork(Network):
                 if node.is_gateway:
                     routers.append(node)
         return routers
+
 
 
 class VirtualNetwork(Network):

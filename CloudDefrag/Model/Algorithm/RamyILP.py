@@ -127,9 +127,9 @@ class RamyILP:
             vlinks_combination = hosted_req.hosted_vlinks_combinations
             vlink_migration_cost = gp.quicksum((vlink_assign_dict[v, s] * (1 - vl[v, s])) *
                                                vlink_migrate_cost_dict[v, s] for v, s in vlinks_combination)
-
+            self._model.update()
             cost += vm_migration_cost + vlink_migration_cost
-
+            #TODO: Add hosted vlink assign cost
         # New vlinks assign cost
         for new_req in self._new_requests:
             new_vlinks_assign_cost = new_req.new_vlinks_assign_vars.prod(new_req.requested_vlinks_cost)

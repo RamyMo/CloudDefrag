@@ -27,11 +27,11 @@ class InputParser:
             "input/Requests/E2E.CSV"
         self._new_requests_dist_file = kwargs["new_requests_dist_file"] if "new_requests_dist_file" in kwargs else \
             "input/NewRequests/RequestsDist.CSV"
-        self._hosted_requests_dist_file = kwargs["hosted_requests_dist_file"] if "hosted_requests_dist_file" in kwargs else \
+        self._hosted_requests_dist_file = kwargs[
+            "hosted_requests_dist_file"] if "hosted_requests_dist_file" in kwargs else \
             "input/HostedRequests/RequestsDist.CSV"
         self._new_requests = None
         self._hosted_requests = None
-
 
     def __parse_network_files(self):
         self.__parse_network_nodes()
@@ -50,19 +50,22 @@ class InputParser:
                 memory = int(row["RAM GB"])
                 storage = int(row["Storage GB"])
                 is_gateway = bool(int(row["isGateway?"]))
+                weight = int(row["Weight"])
+
                 if type == "Server":
-                    self.__parse_server(name, label, cpu, memory, storage)
+                    self.__parse_server(name, label, cpu, memory, storage, weight)
                 elif type == "Router":
                     self.__parse_router(name, label, is_gateway)
 
-    def __parse_server(self, name: str, label: str, cpu: int, memory: int, storage: int):
+    def __parse_server(self, name: str, label: str, cpu: int, memory: int, storage: int, weight: int):
         net = self._net
-        s = Server(specs=Specs(cpu=cpu, memory=memory, storage=storage), node_name=name, node_label=label)
+        s = Server(specs=Specs(cpu=cpu, memory=memory, storage=storage), node_name=name, node_label=label,
+                   weight=weight)
         net.add_network_node(s, name=name, label=label, color="gold")
 
     def __parse_router(self, name: str, label: str, is_gateway: bool):
         net = self._net
-        w = Router(node_name=name, node_label=label, is_gateway=is_gateway)
+        w = Router(node_name=name, node_label=label, is_gateway=is_gateway, weight=0)
         if is_gateway:
             net.add_network_node(w, name=name, label=label, color="lightskyblue")
         else:
@@ -75,13 +78,14 @@ class InputParser:
         with open(network_connections_file, "r") as file:
             csv_file = csv.DictReader(file)
             for row in csv_file:
+                weight = int(row["Weight"])
                 source = row["Source"]
                 target = row["Target"]
                 bw = int(row["B.W (Mbps)"])
                 prop_delay = float(row["Propagation Delay (µs)"]) * (10 ** -6)
                 n1 = net_dict[source]
                 n2 = net_dict[target]
-                pl = net.add_network_edge(PhysicalLink(source=n1, target=n2,
+                pl = net.add_network_edge(PhysicalLink(source=n1, target=n2, weight=weight,
                                                        link_specs=LinkSpecs(bandwidth=bw,
                                                                             propagation_delay=prop_delay)))
 
@@ -136,7 +140,8 @@ class InputParser:
                     target = int(row["Target"])
                     prop_delay_req = float(row["Delay Req (µs)"])
                     bw_req = float(row["BW requirement (Mbps)"])
-
+                    # TODO: Parse new vLink assign cost
+                    # TODO: Parse hosted vLink migration cost
                     vlink = VirtualLink(source=vms[source], target=vms[target],
                                         link_specs=LinkSpecs(bandwidth=bw_req, propagation_delay=prop_delay_req))
                     vlinks.append(vlink)
@@ -193,6 +198,7 @@ class InputParser:
             net = self._net
             for row in csv_file:
                 gateway_name = row["Gateway"]
+                if gateway_name not in net.get_node_dict().keys(): continue
                 gateway_router = net.get_node_dict()[gateway_name]
                 num_of_type1 = int(row["Type 1"])
                 num_of_type2 = int(row["Type 2"])
@@ -214,6 +220,7 @@ class InputParser:
             net = self._net
             for row in csv_file:
                 gateway_name = row["Gateway"]
+                if gateway_name not in net.get_node_dict().keys(): continue
                 gateway_router = net.get_node_dict()[gateway_name]
                 num_of_type1 = int(row["Type 1"])
                 num_of_type2 = int(row["Type 2"])

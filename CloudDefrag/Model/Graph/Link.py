@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 
 from CloudDefrag.Logging.Logger import Logger
@@ -54,9 +55,22 @@ class Link(ABC):
         self._link_specs = kwargs["link_specs"] if "link_specs" in kwargs else None
         self._source = kwargs["source"] if "source" in kwargs else None
         self._target = kwargs["target"] if "target" in kwargs else None
+        self._weight = kwargs["weight"] if "weight" in kwargs else None
+        self._weight = kwargs["link_score"] if "link_score" in kwargs else None
 
     def __str__(self) -> str:
         return f"Link {self._source} to {self._target}"
+
+    @property
+    def weight(self):
+        return self._weight
+
+    @property
+    def link_score(self):
+        used_bw = self.link_specs.used_bandwidth
+        total_bw = self.link_specs.bandwidth
+        score = math.ceil(used_bw * 100 / total_bw)
+        return score
 
     # Name of the links as ("source", "target")
     @property
@@ -178,7 +192,7 @@ class VirtualLink(Link):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._hosting_physical_links = kwargs["hosting_physical_links"] if "hosting_physical_links" in kwargs else []
-        self._vlink_migration_coeff = kwargs["vlink_migration_coeff"] if "vlink_migration_coeff" in kwargs else 1.0
+        self._vlink_migration_coeff = kwargs["vlink_migration_coeff"] if "vlink_migration_coeff" in kwargs else 10.0
         self._vlink_revenue_coeff = kwargs["vlink_revenue_coeff"] if "vlink_revenue_coeff" in kwargs else 1.0
         self._prop_delay_req_constr = None
         Logger.log.info(f"Created a Virtual Link from {self.source} to {self.target}")

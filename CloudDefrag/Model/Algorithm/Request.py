@@ -27,7 +27,6 @@ class VMRequest(ABC):
         self._request_id = VMRequest._latest_request_id
         self._e2e_delay_constrs = None
 
-
     @property
     def request_type(self) -> int:
         return self._request_type
@@ -94,7 +93,7 @@ class HostedVMRequest(VMRequest):
         self._hosted_vms_servers_assign_dict = {}  # Assignment of all existing VMs
         self._hosted_vms_servers_migrate_cost_dict = {}  # Migration cost
         self.__create_hosted_vms_dicts()
-        self.__hosted_vms_servers_objects_combination = None
+        self._hosted_vms_servers_objects_combination = None
         self._hosted_vms_combinations, self._hosted_vms_servers_migration_cost = \
             gp.multidict(self._hosted_vms_servers_migrate_cost_dict)
         # Hosted VMs Assignment variables after migration
@@ -109,12 +108,15 @@ class HostedVMRequest(VMRequest):
         self._hosted_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
 
         self.__create_hosted_vlinks_dicts()
-        self.__hosted_vlinks_objects_combination = None
+        self._hosted_vlinks_objects_combination = None
         self._hosted_vlinks_combinations, self._hosted_vlinks_migration_cost = \
             gp.multidict(self._hosted_vlink_migrate_cost_dict)
         _, self._hosted_vlinks_prop_delay = gp.multidict(self._hosted_vlink_prop_delay_dict)
         # Hosted vLinks Assignment variables after migration
         self._vL = None
+
+    def __str__(self) -> str:
+        return f"Hosted Request: ID:{self.request_id}, Type:{self.request_type}"
 
     @property
     def hosted_vlinks_prop_delay(self):
@@ -170,7 +172,7 @@ class HostedVMRequest(VMRequest):
 
     @property
     def hosted_vlinks_objects_combination(self):
-        return self.__hosted_vlinks_objects_combination
+        return self._hosted_vlinks_objects_combination
 
     @property
     def hosted_vlink_assign_dict(self):
@@ -197,7 +199,7 @@ class HostedVMRequest(VMRequest):
 
     def __create_hosted_vlinks_dicts(self):
         hosted_vlinks_combination = list(itertools.product(self._hosted_vlinks, self.physical_net.get_links()))
-        self.__hosted_vlinks_objects_combination = hosted_vlinks_combination
+        self._hosted_vlinks_objects_combination = hosted_vlinks_combination
         for i in hosted_vlinks_combination:
             vl = i[0]  # vLink object
             pl = i[1]  # pLink object
@@ -243,6 +245,7 @@ class HostedVMRequest(VMRequest):
         # Hosted vLinks Assignment variables after migration
         self._vL = None
 
+
 class NewVMRequest(VMRequest):
 
     def __init__(self, virtual_net: VirtualNetwork, physical_net: PhysicalNetwork, gateway_router: Router,
@@ -271,7 +274,7 @@ class NewVMRequest(VMRequest):
         self._requested_vlink_cost_dict = {}  # Cost of assignment of all new vlinks
         self._requested_vlink_revenue_dict = {}  # Revenue of assignment of all new vlinks
         self._requested_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
-        self.__requested_vlinks_object_combinations = None
+        self._requested_vlinks_object_combinations = None
         self.__create_requested_vlinks_dicts()
         self._requested_vlinks_combinations, self._requested_vlinks_cost = \
             gp.multidict(self._requested_vlink_cost_dict)
@@ -279,6 +282,9 @@ class NewVMRequest(VMRequest):
         _, self._requested_vlinks_prop_delay = gp.multidict(self._requested_vlink_prop_delay_dict)
         # New vlinks Assignment variables
         self._new_vl = None
+
+    def __str__(self) -> str:
+        return f"New Request: ID:{self.request_id}, Type:{self.request_type}"
 
     @property
     def requested_vlinks_prop_delay(self):

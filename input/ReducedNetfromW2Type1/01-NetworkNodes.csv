@@ -1,0 +1,7 @@
+Name,Label,Type,CPU core,RAM GB,Storage GB,isGateway?,Weight
+s1,server,Server,10,10,1000,0,5
+s7,server,Server,10,10,1000,0,1
+s8,server,Server,10,10,1000,0,10
+w2,gateway router,Router,0,0,0,1,0
+w6,router,Router,0,0,0,0,0
+w1,router,Router,0,0,0,0,0

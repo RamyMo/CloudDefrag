@@ -6,6 +6,7 @@ from CloudDefrag.Model.Graph.Link import VirtualLink
 from CloudDefrag.Model.Graph.Specs import Specs
 from CloudDefrag.Model.Graph.VNF import VNF
 import gurobipy as gp
+import math
 
 
 class Node(ABC):
@@ -14,6 +15,11 @@ class Node(ABC):
         self._specs = kwargs["specs"] if "specs" in kwargs else None
         self._node_name = kwargs["node_name"] if "node_name" in kwargs else None
         self._node_label = kwargs["node_label"] if "node_label" in kwargs else None
+        self._weight = kwargs["weight"] if "weight" in kwargs else None
+
+    @property
+    def weight(self):
+        return self._weight
 
     @property
     def specs(self) -> Specs:
@@ -78,6 +84,39 @@ class Server(PhysicalNode):
 
     def __str__(self) -> str:
         return f"{self.node_name}"
+
+    @property
+    def cpu_score(self):
+        used_cpu = self.used_specs.cpu
+        total_cpu = self.specs.cpu
+        score = used_cpu * 100 / total_cpu
+        return score
+
+    @property
+    def memory_score(self):
+        used_memory = self.used_specs.memory
+        total_memory = self.specs.memory
+        score = used_memory * 100 / total_memory
+        return score
+
+    @property
+    def disk_score(self):
+        used_disk = self.used_specs.storage
+        total_disk = self.specs.storage
+        score = used_disk * 100 / total_disk
+        return score
+
+    @property
+    def node_score(self):
+        cpu_score = self.cpu_score
+        memory_score = self.memory_score
+        disk_score = self.disk_score
+        cpu_weight = 1
+        memory_weight = 1
+        disk_weight = 1
+        score = math.ceil((cpu_weight * cpu_score + memory_score * memory_weight + disk_score * disk_weight)
+                          / (cpu_weight + memory_weight + disk_weight))
+        return score
 
     @property
     def server_cpu_constrs(self):

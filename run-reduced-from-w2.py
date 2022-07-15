@@ -19,8 +19,9 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 
 def main():
     # Create the network
-    net = PhysicalNetwork(name="Net1")
-    input_parser = InputParser(net)
+    net = PhysicalNetwork(name="Net-w2-t1")
+    input_parser = InputParser(net, network_nodes_file="input/ReducedNetfromW2Type1/01-NetworkNodes.csv",
+                               network_connections_file="input/ReducedNetfromW2Type1/02-NetworkConnections.csv")
     # Draw the network topology
     net_visual = NetworkVisualizer(net)
     net_visual.plot()
@@ -29,15 +30,17 @@ def main():
     new_requests = input_parser.get_all_new_requests()
     input_parser.assign_hosted_requests()
 
-
+    out_parser = OutputParser(net, hosted_requests, new_requests)
+    out_parser.parse_net_snapshot(nodes_file_name="output/NetSnapShot/NetworkNodesSnapShot-before.csv",
+                                  links_file_name="output/NetSnapShot/NetworkConnectionsSnapShot-before.csv")
 
     algo = RamyILP(net, new_requests, hosted_requests)
     algo.solve(display_result=True)
     algo.apply_result()
 
-    out_parser = OutputParser(net, hosted_requests, new_requests)
     out_parser.parse_request_assignments()
-
+    out_parser.parse_net_snapshot(nodes_file_name="output/NetSnapShot/NetworkNodesSnapShot-after.csv",
+                                  links_file_name="output/NetSnapShot/NetworkConnectionsSnapShot-after.csv")
     print("Done")
 
 

@@ -14,31 +14,19 @@ import networkx as nx
 
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
+from CloudDefrag.QLearning.Qlearning import Qlearning
+from CloudDefrag.QLearning.VNF_Env import VNF_Env
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisualizer
 
 
 def main():
-    # Create the network
-    net = PhysicalNetwork(name="Net1")
-    input_parser = InputParser(net)
-    # Draw the network topology
-    net_visual = NetworkVisualizer(net)
-    net_visual.plot()
+    env = VNF_Env()
+    qlearn = Qlearning(env)
+    qlearn.learn()
+    qlearn.plot()
+    qlearn.generate_qtables_charts()
+    qlearn.generate_qtables_video()
 
-    hosted_requests = input_parser.get_all_hosted_requests()
-    new_requests = input_parser.get_all_new_requests()
-    input_parser.assign_hosted_requests()
-
-
-
-    algo = RamyILP(net, new_requests, hosted_requests)
-    algo.solve(display_result=True)
-    algo.apply_result()
-
-    out_parser = OutputParser(net, hosted_requests, new_requests)
-    out_parser.parse_request_assignments()
-
-    print("Done")
 
 
 if __name__ == '__main__':
