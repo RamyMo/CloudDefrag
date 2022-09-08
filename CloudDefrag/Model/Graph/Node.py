@@ -82,6 +82,8 @@ class Server(PhysicalNode):
         self._server_memory_constr = None
         self._server_storage_constr = None
 
+        self._server_cost_coefficient = self.weight
+
     def __str__(self) -> str:
         return f"{self.node_name}"
 

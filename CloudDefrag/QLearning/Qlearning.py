@@ -68,7 +68,7 @@ class Qlearning:
             discrete_state = env.reset()
             done = False
 
-            for i in range(200):
+            for i in range(env.number_of_requests):
                 if np.random.random() > epsilon:
                     # Get action from Q table
                     action = np.argmax(q_table[discrete_state])
@@ -94,10 +94,10 @@ class Qlearning:
                     # Update Q table with new Q value
                     q_table[discrete_state + (action,)] = new_q
                 # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
-                elif new_discrete_state >= (90, 90):
-                    print(f"We use 90% of both comp and comm on episode: {episode}")
+                else:
+                    # print(f"We allocated all requests on episode: {episode}")
                     # q_table[discrete_state + (action,)] = reward
-                    q_table[discrete_state + (action,)] = 100  # We get a 100 reward when we use 90% of both
+                    q_table[discrete_state + (action,)] = env.allocate_all_reward  # We get a 100 reward when we allocate all requests
                 discrete_state = new_discrete_state
 
             # Decaying is being done every episode if episode number is within decaying range
@@ -125,7 +125,7 @@ class Qlearning:
         plt.legend(loc=5)
         plt.grid(True)
         plt.savefig(f"output/Q-tables/Rewards.png")
-        # plt.show()
+        plt.show()
 
     def generate_qtables_charts(self):
 

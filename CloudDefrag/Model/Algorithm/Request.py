@@ -368,6 +368,10 @@ class NewVMRequest(VMRequest):
         return self._requested_vms_servers_revenue
 
     @property
+    def requested_vms_servers_cost(self):
+        return self._requested_vms_servers_cost
+
+    @property
     def requested_vms_dict(self):
         return self._requested_vms_dict
 

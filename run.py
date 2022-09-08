@@ -9,6 +9,7 @@ from CloudDefrag.Model.Graph.Link import VirtualLink, LinkSpecs, PhysicalLink
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
 from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router, DummyVirtualMachine
 from CloudDefrag.Model.Graph.Specs import Specs
+from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -33,10 +34,15 @@ def main():
 
     algo = RamyILP(net, new_requests, hosted_requests)
     algo.solve(display_result=True)
-    algo.apply_result()
 
-    out_parser = OutputParser(net, hosted_requests, new_requests)
-    out_parser.parse_request_assignments()
+    if algo.isFeasible:
+        algo.apply_result()
+
+        out_parser = OutputParser(net, hosted_requests, new_requests)
+        out_parser.parse_request_assignments()
+    else:
+        inf_analyzer = InfeasAnalyzer(algo.model)
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False)
 
     print("Done")
 
