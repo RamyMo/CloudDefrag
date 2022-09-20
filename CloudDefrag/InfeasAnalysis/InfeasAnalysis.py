@@ -1,4 +1,4 @@
-import  multiprocessing
+import multiprocessing
 import sys
 import gurobipy as gp
 from gurobipy import GRB
@@ -11,6 +11,7 @@ from CloudDefrag.InfeasAnalysis.iis import IISGraph, IISCompute
 from CloudDefrag.InfeasAnalysis.iis.IISCover import IISCover
 from CloudDefrag.InfeasAnalysis.iis.ModelLib import AdvancedModel
 from CloudDefrag.InfeasAnalysis.iis.Chinneck import IISFinder, IISesFinder, IISRelaxer
+from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
 
 
 def filtering(model, maxExecutionTime, maxNumOfCoversToShow, methodOfIISRelaxation):
@@ -159,10 +160,15 @@ def filteringShuffleCover(model):
     print("Execution Time: %s seconds" % exec_time)
 
 
-def elasticHeur(model, all_constrs_are_modif):
+def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax) -> RepairResult:
     # https://www.gurobi.com/documentation/9.5/refman/py_model_feasrelax.html#pythonmethod:Model.feasRelax
-    print("Algorithm is Elastic Heuristic")
+    # print("\nAlgorithm is Elastic Heuristic\n ")
+    isRepaired = False
     start_time = time.time()
+    relax_C1 = True if "C1" in recommended_consts_groups_to_relax else False
+    relax_C2 = True if "C2" in recommended_consts_groups_to_relax else False
+    relax_C3 = True if "C3" in recommended_consts_groups_to_relax else False
+    relax_C4 = True if "C4" in recommended_consts_groups_to_relax else False
 
     # TODO Add a RL agent that will recommend the violConstrs
 
@@ -173,15 +179,24 @@ def elasticHeur(model, all_constrs_are_modif):
             violConstrs.append(c)
             rhspen.append(1000)
             continue
-        elif "C1" in c.ConstrName:
+        elif "C1" in c.ConstrName and "cpu" in c.ConstrName and relax_C1:
+            violConstrs.append(c)
+            rhspen.append(1)
+        elif "C1" in c.ConstrName and "memory" in c.ConstrName and relax_C1:
+            violConstrs.append(c)
+            rhspen.append(1)
+        elif "C1" in c.ConstrName and "storage" in c.ConstrName and relax_C1:
+            violConstrs.append(c)
+            rhspen.append(1 / 100)
+        elif "C2" in c.ConstrName and relax_C2:
+            violConstrs.append(c)
+            rhspen.append(1 / 100)
+        elif "C3" in c.ConstrName and relax_C3:
             violConstrs.append(c)
             rhspen.append(1000)
-        elif "C2" in c.ConstrName:
+        elif "C4" in c.ConstrName and relax_C4:
             violConstrs.append(c)
-            rhspen.append(1000)
-        elif "C3" in c.ConstrName:
-            violConstrs.append(c)
-            rhspen.append(1000)
+            rhspen.append(1000000)
 
         # else:
         #     violConstrs.append(c)
@@ -190,27 +205,34 @@ def elasticHeur(model, all_constrs_are_modif):
     model.optimize()
     model.feasRelax(0, False, None, None, None, violConstrs, rhspen)
     model.optimize()
-
+    isRepaired = IISCompute.isFeasible(model)
     cost = 0
-    for var in model.getVars():
-        if "Art" in var.VarName:
-            if var.X != 0:
-                print(var.VarName, " : ", var.X)
-                if "cpu" in var.VarName:
-                    cost += var.X
-                elif "mem" in var.VarName:
-                    cost += var.X / 1000
-                elif "dsk" in var.VarName:
-                    cost += var.X / 100
-                else:
-                    cost += var.X  # BW
+    # print("\nElastic Variables:")
+    if isRepaired:
+        for var in model.getVars():
+            if "Art" in var.VarName:
+                if var.X != 0:
+                    # print(var.VarName, " : ", var.X)
+                    if "cpu" in var.VarName:
+                        cost += var.X
+                    elif "memory" in var.VarName:
+                        cost += var.X
+                    elif "storage" in var.VarName:
+                        cost += var.X / 100
+                    elif "bw_cap" in var.VarName:
+                        cost += var.X / 100
+                    else:
+                        cost += var.X  # BW
+    else:
+        cost = -1000
 
-    print("\t\t*** Result Summary ***")
-    print("Cost:", cost, "Number of servers:", "Num of Changes:")
+    # print("\n\t\t*** Result Summary ***")
+    # print("Cost:", cost, "Number of servers:", "Num of Changes:")
 
     exec_time = time.time() - start_time
-    print("Repair Execution Time: %s seconds" % exec_time)
-
+    # print("Repair Execution Time: %s seconds" % exec_time)
+    result = RepairResult(model, cost, exec_time, "Elastic Heuristic", recommended_consts_groups_to_relax, isRepaired)
+    return result
 
 def get_model_statistics(model):
     num_of_constrs = len(model.getConstrs())
@@ -240,7 +262,7 @@ def get_model_statistics(model):
         elif "C8" in c.ConstrName:
             c8 += 1
 
-    print("C1 is {:0.2f} % of all constrs".format((c1/num_of_constrs)*100))
+    print("C1 is {:0.2f} % of all constrs".format((c1 / num_of_constrs) * 100))
     print("C2 is {:0.2f} % of all constrs".format((c2 / num_of_constrs) * 100))
     print("C3 is {:0.2f} % of all constrs".format((c3 / num_of_constrs) * 100))
     print("C4 is {:0.2f} % of all constrs".format((c4 / num_of_constrs) * 100))
@@ -249,14 +271,16 @@ def get_model_statistics(model):
     print("C7 is {:0.2f} % of all constrs".format((c7 / num_of_constrs) * 100))
     print("C8 is {:0.2f} % of all constrs".format((c8 / num_of_constrs) * 100))
 
+
 class InfeasAnalyzer:
-    def __init__(self, model, ** kwargs) -> None:
-        print("\n \t\t*** Printing Model Info. for Inf. Analysis ***")
-        print("Number of Constraints = ", len(model.getConstrs()))
-        print("Number of Variables = ", len(model.getVars()))
+    def __init__(self, model, **kwargs) -> None:
+        # print("\n \t\t*** Printing Model Info. for Inf. Analysis ***")
+        # print("Number of Constraints = ", len(model.getConstrs()))
+        # print("Number of Variables = ", len(model.getVars()))
         self._algorithm = kwargs["algorithm"] if "algorithm" in kwargs else "ElasticHeur"
         self._model = model
-        get_model_statistics(model)
+        self._RepairResult = None
+        # get_model_statistics(model)
 
     @property
     def algorithm(self):
@@ -266,11 +290,17 @@ class InfeasAnalyzer:
     def algorithm(self, value):
         self._algorithm = value
 
-    def repair_infeas(self, ** kwargs):
+    @property
+    def result(self):
+        return self._RepairResult
+
+    def repair_infeas(self, **kwargs):
         self.algorithm = kwargs["algorithm"] if "algorithm" in kwargs else "ElasticHeur"
         # algorithm = "ElasticHeur"  # Algorithm used to find IISes: "Filtering", "FilteringShuffle","FilteringShuffleCover" "Enum", "Pivoting", "ElasticHeur" (In Progress)
         model = self._model
         all_constrs_are_modif = kwargs["all_constrs_are_modif"] if "all_constrs_are_modif" in kwargs else False
+        recommended_consts_groups_to_relax = kwargs["recommeded_consts_groups_to_relax"] if \
+            "recommeded_consts_groups_to_relax" in kwargs else "C1, C2, C3, C4"
 
         if self.algorithm == "Filtering":
             maxExecutionTime = 10  # Maximum time to run (in seconds)
@@ -284,5 +314,4 @@ class InfeasAnalyzer:
         elif self.algorithm == "FilteringShuffleCover":
             filteringShuffleCover(model)
         elif self.algorithm == "ElasticHeur":
-            elasticHeur(model, all_constrs_are_modif)
-
+            self._RepairResult = elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax)

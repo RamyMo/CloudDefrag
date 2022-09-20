@@ -37,13 +37,14 @@ def main():
 
     if algo.isFeasible:
         algo.apply_result()
-
         out_parser = OutputParser(net, hosted_requests, new_requests)
         out_parser.parse_request_assignments()
     else:
         inf_analyzer = InfeasAnalyzer(algo.model)
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-
+        # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="C1, C2, C3, C4")
+        repair_result = inf_analyzer.result
+        repair_result.print_result()
     print("Done")
 
 

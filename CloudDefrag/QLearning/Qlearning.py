@@ -10,7 +10,7 @@ from CloudDefrag.QLearning.VNF_Env import VNF_Env
 
 
 class Qlearning:
-    def __init__(self, env: VNF_Env, **kwargs) -> None:
+    def __init__(self, env, **kwargs) -> None:
 
         # Environment
         self.env = env
@@ -18,7 +18,7 @@ class Qlearning:
         # Q-Learning settings
         self._learning_rate = kwargs["learning_rate"] if "learning_rate" in kwargs else 0.1
         self._discount_factor = kwargs["discount_factor"] if "discount_factor" in kwargs else 0.95
-        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 5000
+        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 100
 
         # Exploration settings
         self._epsilon = kwargs["epsilon"] if "epsilon" in kwargs else 1  # not a constant, qoing to be decayed
@@ -29,7 +29,7 @@ class Qlearning:
 
         # Results Window Size
         # Results Window size is 1000 Episodes
-        self._show_every = kwargs["show_every"] if "show_every" in kwargs else 1000
+        self._show_every = kwargs["show_every"] if "show_every" in kwargs else 10
 
         # Create the Q-table
         self._q_table = np.random.uniform(low=env.lowest_possible_reward, high=env.highest_possible_reward,
@@ -68,7 +68,9 @@ class Qlearning:
             discrete_state = env.reset()
             done = False
 
-            for i in range(env.number_of_requests):
+            # Use the first for VNF placement problem
+            # for i in range(env.number_of_requests):               # This is the first
+            for i in range(env.number_of_soft_constraints_groups):
                 if np.random.random() > epsilon:
                     # Get action from Q table
                     action = np.argmax(q_table[discrete_state])
@@ -83,21 +85,32 @@ class Qlearning:
                     # env.render()
                     # time.sleep(0.01)
 
-                # If simulation did not end yet after last step - update Q table
-                if not done:
-                    # Maximum possible Q value in next step (for new state)
-                    max_future_q = np.max(q_table[new_discrete_state])
-                    # Current Q value (for current state and performed action)
-                    current_q = q_table[discrete_state + (action,)]
-                    # And here's our equation for a new Q value for current state and action
-                    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-                    # Update Q table with new Q value
-                    q_table[discrete_state + (action,)] = new_q
-                # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
-                else:
-                    # print(f"We allocated all requests on episode: {episode}")
-                    # q_table[discrete_state + (action,)] = reward
-                    q_table[discrete_state + (action,)] = env.allocate_all_reward  # We get a 100 reward when we allocate all requests
+                # Maximum possible Q value in next step (for new state)
+                max_future_q = np.max(q_table[new_discrete_state])
+                # Current Q value (for current state and performed action)
+                current_q = q_table[discrete_state + (action,)]
+                # And here's our equation for a new Q value for current state and action
+                new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                # Update Q table with new Q value
+                q_table[discrete_state + (action,)] = new_q
+
+                # If simulation did not end yet after last step - update Q table (Disregard for now)
+                # if not done:
+                #     # Maximum possible Q value in next step (for new state)
+                #     max_future_q = np.max(q_table[new_discrete_state])
+                #     # Current Q value (for current state and performed action)
+                #     current_q = q_table[discrete_state + (action,)]
+                #     # And here's our equation for a new Q value for current state and action
+                #     new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                #     # Update Q table with new Q value
+                #     q_table[discrete_state + (action,)] = new_q
+                # # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
+                # else:
+                #     # print(f"We allocated all requests on episode: {episode}")
+                #     # q_table[discrete_state + (action,)] = reward
+                #     q_table[discrete_state + (action,)] = env.fixed_infeasibility_reward  # We get a 100 reward when we fix infeas
+                #     # q_table[discrete_state + (action,)] = env.allocate_all_reward  # We get a 100 reward when we allocate all requests
+
                 discrete_state = new_discrete_state
 
             # Decaying is being done every episode if episode number is within decaying range
@@ -159,7 +172,7 @@ class Qlearning:
                     ax4.scatter(x, y, c=get_q_color(y_vals[3], y_vals, duplicate)[0], marker="o",
                                 alpha=get_q_color(y_vals[3], y_vals, duplicate)[1])
 
-                    ax1.set_title("A0: Bin-Pack")
+                    ax1.set_title("A1: C1")
                     # ax1.set_ylabel("Communication Index")
                     # ax1.set_xlabel("Comm Index")
                     ax2.set_title("A1: Spread")
