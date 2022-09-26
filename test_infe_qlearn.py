@@ -31,7 +31,7 @@ else:
     qlearn.learn()
     learning_time = time.time() - start_time
     print(f"\nLearning time is: {learning_time} seconds")
-    # qlearn.plot()
+    qlearn.plot()
     # qlearn.generate_qtables_charts()
     # qlearn.generate_qtables_video()
 

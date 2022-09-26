@@ -21,33 +21,33 @@ class Inf_Env:
         self.current_time_step = 0
         self.current_episode = 0
         # States
-        self._number_of_soft_constraints_groups = 4                             # 4 or 8 if we consider all constraints
+        self._number_of_soft_constraints_groups = 8                             # 4 or 8 if we consider all constraints
         self._number_of_soft_constraints_groups_values = 2 ** self._number_of_soft_constraints_groups
 
         # Actions
-        self._action_space_size = 5                     # 5 Actions (for 4 constraints) + 1 do nothing action
+        self._action_space_size = 9                     # 8 Actions (for 8 constraints) + 1 do nothing action
 
         # Rewards
         self._fixed_infeas_reward = 100
-        self._do_nothing_reward = 0
+        self._do_nothing_reward = 100
 
         # Penalties
         self._action_penalty = 10
-        self._select_all_constrs_penalty = self._action_penalty
-        self._pick_previous_constraint_penalty = 2 * self._action_penalty
-        self._pick_constraint_after_fixing_infeas_penalty = self._action_penalty
-        self._do_nothing_penalty = self._action_penalty
-        self._hard_constraint_penalty = 0
+        self._select_all_constrs_penalty = 100
+        self._pick_previous_constraint_penalty = 100
+        self._pick_constraint_after_fixing_infeas_penalty = 100
+        self._do_nothing_penalty = 100
+        self._hard_constraint_penalty = 1000
 
         # Reward extremes
-        self._lowest_possible_reward = -5
-        self._highest_possible_reward = 5
+        self._lowest_possible_reward = -10
+        self._highest_possible_reward = 10
 
         # Q-table
         # Keeping size simple for now
-        self._q_table_size = (2, 2, 2, 2, self._action_space_size)
+        self._q_table_size = (2, 2, 2, 2, 2, 2, 2, 2, self._action_space_size)
 
-        self._current_state = (0, 0, 0, 0)
+        self._current_state = (0, 0, 0, 0, 0, 0, 0, 0)
 
     @property
     def original_model(self):
@@ -146,7 +146,7 @@ class Inf_Env:
 
     def reset(self):
         # Return initial state
-        initial_state = (0, 0, 0, 0)
+        initial_state = (0, 0, 0, 0, 0, 0, 0, 0)
         self.current_state = initial_state
         self.modified_model = gp.read(self.model_path)
         return initial_state
@@ -168,8 +168,8 @@ class Inf_Env:
                 new_state = self.current_state
             else:
                 reward -= self.pick_constraint_after_fixing_infeas_penalty
-                # if 3 < action < self._action_space_size - 1:                # Hard constraint action
-                #     reward -= self.hard_constraint_penalty
+                if 3 < action < self._action_space_size - 1:                # Hard constraint action
+                    reward -= self.hard_constraint_penalty
                 if current_state_as_list[action] == 1:                      # Same constraint was relaxed before
                     reward -= self.pick_previous_constraint_penalty
                     new_state = tuple(current_state_as_list)                # Stays in the same state
@@ -180,15 +180,15 @@ class Inf_Env:
             if action == self._action_space_size - 1:                   # Do nothing penalty
                 new_state = self.current_state
                 reward -= self.do_nothing_penalty                       # Penalized for not taking an action
-            # elif 3 < action < self._action_space_size - 1:                # Hard constraint action
-            #     reward -= self.hard_constraint_penalty
-            #     if current_state_as_list[action] == 1:                      # Same constraint was relaxed before
-            #         reward -= self.pick_previous_constraint_penalty
-            #         new_state = tuple(current_state_as_list)                # Stays in the same state
-            #     else:                                                       # Constraint was not relaxed before
-            #         new_state_as_list[action] = 1
-            #         new_state = tuple(new_state_as_list)
-            #         reward -= self.action_penalty
+            elif 3 < action < self._action_space_size - 1:                # Hard constraint action
+                reward -= self.hard_constraint_penalty
+                if current_state_as_list[action] == 1:                      # Same constraint was relaxed before
+                    reward -= self.pick_previous_constraint_penalty
+                    new_state = tuple(current_state_as_list)                # Stays in the same state
+                else:                                                       # Constraint was not relaxed before
+                    new_state_as_list[action] = 1
+                    new_state = tuple(new_state_as_list)
+                    reward -= self.action_penalty
             else:                                                           # Soft constraint Action
                 if current_state_as_list[action] == 1:                      # Same constraint was relaxed before
                     reward -= self.pick_previous_constraint_penalty
@@ -212,6 +212,14 @@ class Inf_Env:
 
 
     def step(self, action: int):
+        new_state = None
+        current_state_as_list = list(self.current_state)
+        new_state_as_list = current_state_as_list.copy()
+        reward = 0  # Initial value for reward
+        done = False
+
         new_state, reward, done = self.take_action(action)
+
         self.current_state = new_state
+
         return new_state, reward, done

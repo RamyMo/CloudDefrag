@@ -21,7 +21,12 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 def main():
     # Create the network
     net = PhysicalNetwork(name="Net1")
-    input_parser = InputParser(net)
+    # network_nodes_file = "input/RegionalTopo/01-NetworkNodes.csv"
+    # network_connections_file = "input/RegionalTopo/02-NetworkConnections.csv"
+    network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
+    network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"
+    input_parser = InputParser(net, network_nodes_file=network_nodes_file,
+                               network_connections_file=network_connections_file)
     # Draw the network topology
     net_visual = NetworkVisualizer(net)
     net_visual.plot()
@@ -42,7 +47,7 @@ def main():
     else:
         inf_analyzer = InfeasAnalyzer(algo.model)
         # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="C1, C2, C3, C4")
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="C1, C2")
         repair_result = inf_analyzer.result
         repair_result.print_result()
     print("Done")
