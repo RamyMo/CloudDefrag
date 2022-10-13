@@ -57,6 +57,10 @@ class Qlearning:
         ep_rewards = self._ep_rewards
         aggr_ep_rewards = self._aggr_ep_rewards
 
+        # Holder of the best current cost and time solution
+        current_best_cost = -1
+        current_best_time = -1
+
         for episode in range(0, EPISODES + 1):
             episode_reward = 0
 
@@ -70,7 +74,7 @@ class Qlearning:
 
             # Use the first for VNF placement problem
             # for i in range(env.number_of_requests):               # This is the first
-            for i in range(env.number_of_soft_constraints_groups):
+            for i in range(env.number_of_soft_constraints_groups):  # Steps
                 if np.random.random() > epsilon:
                     # Get action from Q table
                     action = np.argmax(q_table[discrete_state])
@@ -85,33 +89,51 @@ class Qlearning:
                     # env.render()
                     # time.sleep(0.01)
 
-                # Maximum possible Q value in next step (for new state)
-                max_future_q = np.max(q_table[new_discrete_state])
-                # Current Q value (for current state and performed action)
-                current_q = q_table[discrete_state + (action,)]
-                # And here's our equation for a new Q value for current state and action
-                new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-                # Update Q table with new Q value
-                q_table[discrete_state + (action,)] = new_q
+                # If simulation did not end yet after last step - update Q table
+                if not done:
+                    # Maximum possible Q value in next step (for new state)
+                    max_future_q = np.max(q_table[new_discrete_state])
+                    # Current Q value (for current state and performed action)
+                    current_q = q_table[discrete_state + (action,)]
+                    # And here's our equation for a new Q value for current state and action
+                    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                    # Update Q table with new Q value
+                    q_table[discrete_state + (action,)] = new_q
+                    discrete_state = new_discrete_state
+                # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
+                else:   # End of Episode (Terminal State)
+                    # print(f"We allocated all requests on episode: {episode}")
+                    # q_table[discrete_state + (action,)] = reward
+                    # q_table[discrete_state + (action,)] = env.allocate_all_reward  # We get a 100 reward when we allocate all requests
+                    # q_table[discrete_state + (action,)] = env.fixed_infeasibility_reward  # We get a 100 reward when we fix infeas
 
-                # If simulation did not end yet after last step - update Q table (Disregard for now)
-                # if not done:
-                #     # Maximum possible Q value in next step (for new state)
-                #     max_future_q = np.max(q_table[new_discrete_state])
-                #     # Current Q value (for current state and performed action)
-                #     current_q = q_table[discrete_state + (action,)]
-                #     # And here's our equation for a new Q value for current state and action
-                #     new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
-                #     # Update Q table with new Q value
-                #     q_table[discrete_state + (action,)] = new_q
-                # # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
-                # else:
-                #     # print(f"We allocated all requests on episode: {episode}")
-                #     # q_table[discrete_state + (action,)] = reward
-                #     q_table[discrete_state + (action,)] = env.fixed_infeasibility_reward  # We get a 100 reward when we fix infeas
-                #     # q_table[discrete_state + (action,)] = env.allocate_all_reward  # We get a 100 reward when we allocate all requests
+                    # Evaluate the repair at the terminal state and check if it is better than the current best
+                    new_cost, new_time = env.evaluate(new_discrete_state)
+                    better_cost_reward = 10
+                    better_time_reward = 10
+                    if current_best_time < 0 and current_best_cost < 0:
+                        current_best_time = new_time
+                        current_best_cost = new_cost
+                    elif new_cost < current_best_cost:
+                        reward += better_cost_reward
+                        if new_time < current_best_time:
+                            reward += better_time_reward
+                        current_best_time = new_time
+                        current_best_cost = new_cost
 
-                discrete_state = new_discrete_state
+                    # Maximum possible Q value in next step (for new state)
+                    max_future_q = np.max(q_table[new_discrete_state])
+                    # Current Q value (for current state and performed action)
+                    current_q = q_table[discrete_state + (action,)]
+                    # And here's our equation for a new Q value for current state and action
+                    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                    # Update Q table with new Q value
+                    q_table[discrete_state + (action,)] = new_q
+                    q_table[new_discrete_state + (env.action_space_size - 1,)] = 100
+
+
+
+                    break
 
             # Decaying is being done every episode if episode number is within decaying range
             if END_EPSILON_DECAYING >= episode >= START_EPSILON_DECAYING:

@@ -31,12 +31,14 @@ def main():
     net_visual = NetworkVisualizer(net)
     net_visual.plot()
 
+    # Create the requests
     hosted_requests = input_parser.get_all_hosted_requests()
     new_requests = input_parser.get_all_new_requests()
+    # new_requests = input_parser.get_random_new_requests_from_gateway("w3",
+    #                                                                  seed_number=1)  # This bypass requests dist. file
     input_parser.assign_hosted_requests()
 
-
-
+    # VNF Placement
     algo = RamyILP(net, new_requests, hosted_requests)
     algo.solve(display_result=True)
 
@@ -47,9 +49,14 @@ def main():
     else:
         inf_analyzer = InfeasAnalyzer(algo.model)
         # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="C1, C2")
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
         repair_result = inf_analyzer.result
         repair_result.print_result()
+
+        # Apply repair and resolve
+        # inf_analyzer.apply_infeas_repair(net, hosted_requests, new_requests)
+        # algo = RamyILP(net, new_requests, hosted_requests)
+        # algo.solve(display_result=True)
     print("Done")
 
 

@@ -265,9 +265,8 @@ class RamyILP:
                                                          plink.link_specs.propagation_delay) for plink in
                                                         self._physical_links)
                 vlinks_dict[vlink].prop_delay_req_constr = \
-                    self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay, name=f"C4_new_vlink_{vlink}"
-                                                                                            f"_prop_delay")
-
+                    self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay,
+                                          name=f"C4_new_req{new_req.request_id}_vlink_{vlink}_prop_delay")
         for hosted_req in self._hosted_requests:
             link_vars = hosted_req.hosted_vlinks_assign_vars
             vlinks_dict = hosted_req.hosted_vlinks_dict
@@ -278,8 +277,8 @@ class RamyILP:
                                                          plink.link_specs.propagation_delay) for plink
                                                         in self._physical_links)
                 vlinks_dict[vlink].prop_delay_req_constr = \
-                    self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay, name=f"C4_hosted_vlink_{vlink}"
-                                                                                            f"_prop_delay")
+                    self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay,
+                                          name=f"C4_hosted_req{hosted_req.request_id}_vlink_{vlink}_prop_delay")
 
     def __create_flow_conservation_constr(self):
         # Flow Conservation Constraints:  (Group C5)
@@ -409,10 +408,11 @@ class RamyILP:
 
     def display_result(self):
         # Model properties:
+        print("\n\t*** Placement Solution ***")
         print(f"Number of Decision Variables: {len(self._model.getVars())}")
         print(f"Number of Constraints: {len(self._model.getConstrs())}")
         # Display optimal values of decision variables
-        print("\nDecision Variables:")
+        print("Decision Variables:")
         for v in self._model.getVars():
             if v.x > 1e-6:
                 print(f"{v.varName} = {v.x}")

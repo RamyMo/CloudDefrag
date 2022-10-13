@@ -5,6 +5,8 @@ import gurobipy as gp
 from gurobipy import GRB
 from gurobipy.gurobipy import Model
 
+from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
+from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
 from CloudDefrag.Parsing.OutputParser import OutputParser
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer
 from CloudDefrag.InfeasAnalysis.iis import IISCompute
@@ -49,6 +51,9 @@ class Inf_Env:
 
         self._current_state = (0, 0, 0, 0)
 
+    @property
+    def action_space_size(self):
+        return self._action_space_size
     @property
     def original_model(self):
         return self._original_model
@@ -215,3 +220,22 @@ class Inf_Env:
         new_state, reward, done = self.take_action(action)
         self.current_state = new_state
         return new_state, reward, done
+
+    def evaluate(self, final_state):
+        path = self.model_path
+        model = gp.read(path)
+        constrs = ""
+        if final_state[0] == 1:
+            constrs += " C1"
+        if final_state[1] == 1:
+            constrs += " C2"
+        if final_state[2] == 1:
+            constrs += " C3"
+        if final_state[3] == 1:
+            constrs += " C4"
+
+        inf_analyzer = InfeasAnalyzer(model)
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax=constrs)
+        repair_result = inf_analyzer.result
+        cost, time = repair_result.repair_cost, repair_result.repair_exec_time
+        return cost, time

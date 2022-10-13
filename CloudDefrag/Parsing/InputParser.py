@@ -6,7 +6,8 @@ from CloudDefrag.Model.Graph.Link import PhysicalLink, LinkSpecs, VirtualLink
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
 from CloudDefrag.Model.Graph.Node import Server, Router, DummyVirtualMachine, VirtualMachine
 from CloudDefrag.Model.Graph.Specs import Specs
-
+from random import seed
+from random import randint
 
 class InputParser:
     def __init__(self, net: PhysicalNetwork, **kwargs) -> None:
@@ -210,6 +211,31 @@ class InputParser:
                 for i in range(num_of_type3):
                     new_requests.append(self.create_new_request(3, gateway_router))
         self._new_requests = new_requests
+        return new_requests
+
+    def get_random_new_requests_from_gateway(self, gateway_name, seed_number) -> List[NewVMRequest]:
+        print_dist = True
+        new_requests = []
+        net = self._net
+        # seed random number generator
+        seed(seed_number)
+        if gateway_name not in net.get_node_dict().keys():
+            print("Wrong Gateway!")
+            return
+        gateway_router = net.get_node_dict()[gateway_name]
+        num_of_type1 = randint(0, 10)
+        num_of_type2 = randint(0, 10)
+        num_of_type3 = randint(0, 10)
+        if print_dist:
+            print(f"Req. Dist at {gateway_name}: ({num_of_type1}, {num_of_type2}, {num_of_type3})")
+        for i in range(num_of_type1):
+            new_requests.append(self.create_new_request(1, gateway_router))
+        for i in range(num_of_type2):
+            new_requests.append(self.create_new_request(2, gateway_router))
+        for i in range(num_of_type3):
+            new_requests.append(self.create_new_request(3, gateway_router))
+
+
         return new_requests
 
     def get_all_hosted_requests(self) -> List[HostedVMRequest]:

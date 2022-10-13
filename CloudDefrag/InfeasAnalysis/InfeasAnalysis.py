@@ -1,5 +1,7 @@
 import multiprocessing
 import sys
+from typing import List
+
 import gurobipy as gp
 from gurobipy import GRB
 from gurobipy.gurobipy import Model
@@ -12,6 +14,10 @@ from CloudDefrag.InfeasAnalysis.iis.IISCover import IISCover
 from CloudDefrag.InfeasAnalysis.iis.ModelLib import AdvancedModel
 from CloudDefrag.InfeasAnalysis.iis.Chinneck import IISFinder, IISesFinder, IISRelaxer
 from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
+from CloudDefrag.Logging.Logger import Logger
+from CloudDefrag.Model.Algorithm.Request import NewVMRequest, HostedVMRequest
+from CloudDefrag.Model.Graph.Link import LinkSpecs, VirtualLink
+from CloudDefrag.Model.Graph.Network import PhysicalNetwork
 
 
 def filtering(model, maxExecutionTime, maxNumOfCoversToShow, methodOfIISRelaxation):
@@ -190,10 +196,10 @@ def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax
             rhspen.append(1 / 100)
         elif "C2" in c.ConstrName and relax_C2:
             violConstrs.append(c)
-            rhspen.append(1 / 100)
+            rhspen.append(1 / 10)
         elif "C3" in c.ConstrName and relax_C3:
             violConstrs.append(c)
-            rhspen.append(1000)
+            rhspen.append(1000000)
         elif "C4" in c.ConstrName and relax_C4:
             violConstrs.append(c)
             rhspen.append(1000000)
@@ -202,9 +208,22 @@ def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax
         #     violConstrs.append(c)
         #     rhspen.append(100000)
 
-    model.optimize()
+    # model.optimize()
     model.feasRelax(0, False, None, None, None, violConstrs, rhspen)
+
+    # Save repaired model for inspection
+    model.write(f'output/repaired-model.lp')
+
+    # https://www.gurobi.com/documentation/9.5/refman/presolve.html
+    # Set Presolve to 2 to fix the problem of solver giving a zero solution
+    #A value of -1 corresponds to an automatic setting. Other options are off (0), conservative (1), or aggressive (2). More aggressive application of presolve takes more time, but can sometimes lead to a significantly tighter model.
+    # TODO: Fix: Solution count problem still exist. Solver finds multiple solutions and return the wrong one.
+    model.setParam("Presolve", 2)
+
     model.optimize()
+
+    
+
     isRepaired = IISCompute.isFeasible(model)
     cost = 0
     # print("\nElastic Variables:")
@@ -213,16 +232,19 @@ def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax
             if "Art" in var.VarName:
                 if var.X != 0:
                     # print(var.VarName, " : ", var.X)
-                    if "cpu" in var.VarName:
-                        cost += var.X
-                    elif "memory" in var.VarName:
-                        cost += var.X
-                    elif "storage" in var.VarName:
-                        cost += var.X / 100
-                    elif "bw_cap" in var.VarName:
-                        cost += var.X / 100
-                    else:
-                        cost += var.X  # BW
+                    if "C1" in var.VarName:
+                        if "cpu" in var.VarName:
+                            cost += var.X  # 1 cpu core is one unit of cost
+                        elif "memory" in var.VarName:
+                            cost += var.X  # 1 GB of memory is one unit of cost
+                        elif "storage" in var.VarName:
+                            cost += var.X / 100  # 100 GB of storage is one unit of cost
+                    elif "C2" in var.VarName:
+                        cost += var.X / 10  # 10 Mbps of BW is one unit of cost
+                    elif "C3" in var.VarName:
+                        cost += var.X * 10 ** 6  # 1 µs of extra delay is one unit of cost
+                    elif "C4" in var.VarName:
+                        cost += var.X * 10 ** 6  # 1 µs of extra delay is one unit of cost
     else:
         cost = -1000
 
@@ -233,6 +255,7 @@ def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax
     # print("Repair Execution Time: %s seconds" % exec_time)
     result = RepairResult(model, cost, exec_time, "Elastic Heuristic", recommended_consts_groups_to_relax, isRepaired)
     return result
+
 
 def get_model_statistics(model):
     num_of_constrs = len(model.getConstrs())
@@ -315,3 +338,72 @@ class InfeasAnalyzer:
             filteringShuffleCover(model)
         elif self.algorithm == "ElasticHeur":
             self._RepairResult = elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax)
+
+    def apply_infeas_repair(self, net: PhysicalNetwork, hosted_requests: List[HostedVMRequest],
+                            new_requests: List[NewVMRequest]):
+        repair_result = self.result
+        repaired_model = repair_result.repaired_model
+        for var in repaired_model.getVars():
+            if "Art" in var.VarName:
+                if var.X != 0:
+                    if "C1" in var.VarName:
+                        server_name = re.search('C1_(.+?)_', var.VarName).group(1)
+                        server = net.get_node_by_name(server_name)
+                        if "cpu" in var.VarName:
+                            server.specs.increase_cpu_by(var.X)
+                            Logger.log.info(f"Increased number of CPU cores of server {server_name} by {var.X} cores "
+                                            f"new value is: {server.specs.cpu} cores")
+                        elif "memory" in var.VarName:
+                            server.specs.increase_memory_by(var.X)
+                            Logger.log.info(f"Increased memory of server {server_name} by {var.X} GB "
+                                            f"new value is: {server.specs.memory} GB")
+                        elif "storage" in var.VarName:
+                            server.specs.increase_storage_by(var.X)
+                            Logger.log.info(f"Increased storage of server {server_name} by {var.X} GB "
+                                            f"new value is: {server.specs.storage} GB")
+                    elif "C2" in var.VarName:
+                        link_name = re.search('C2_(.+?)_', var.VarName).group(1)
+                        link = net.get_link_by_name(link_name)
+                        link.link_specs.increase_bandwidth_by(var.X)
+                        Logger.log.info(f"Increased bandwidth of link {link_name} by {var.X} Mbps "
+                                        f"new value is: {link.link_specs.bandwidth} Mbps")
+                    elif "C3" in var.VarName:
+                        req_number = re.search('req(.+?)_', var.VarName).group(1)
+                        req_index = int(req_number) - 1
+                        is_new = True if "new" in var.VarName else False
+                        if is_new:
+                            request = new_requests[req_index]
+                            request.e2e_delay += var.X
+                            Logger.log.info(f"Increased the E2E delay requirement of new request No. {req_number} "
+                                            f"by {var.X} µs "
+                                            f"new value is: {request.e2e_delay} µs")
+                        else:
+                            request = hosted_requests[req_index]
+                            request.e2e_delay += var.X
+                            Logger.log.info(
+                                f"Increased the E2E delay requirement of hosted request No. {req_number} by {var.X} µs "
+                                f"new value is: {request.e2e_delay} µs")
+                    elif "C4" in var.VarName:
+                        req_number = re.search('req(.+?)_', var.VarName).group(1)
+                        req_index = int(req_number) - 1
+                        is_new = True if "new" in var.VarName else False
+                        link_name = re.search('vlink_(.+?)_prop_delay', var.VarName).group(1)
+
+                        if is_new:
+                            request = new_requests[req_index]
+                            vlink = request.requested_vlinks_dict[link_name]
+                            vlink.link_specs.increase_propagation_delay_by(var.X)
+
+                            Logger.log.info(
+                                f"Increased the propagation delay requirement of new request No. {req_number} "
+                                f"vLink {link_name} by {var.X} µs new value is: "
+                                f"{vlink.link_specs.propagation_delay} µs")
+                        else:
+                            request = hosted_requests[req_index]
+                            vlink = request.hosted_vlinks_dict[link_name]
+                            vlink.link_specs.increase_propagation_delay_by(var.X)
+                            Logger.log.info(
+                                f"Increased the propagation delay requirement of hosted request No. {req_number} "
+                                f"vLink {link_name} by {var.X} µs new value is: "
+                                f"{vlink.link_specs.propagation_delay} µs")
+        return

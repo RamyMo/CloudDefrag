@@ -39,6 +39,11 @@ class LinkSpecs:
     def propagation_delay(self, value: float):
         self._propagation_delay = value
 
+    def increase_propagation_delay_by(self, added_delay):
+        # Propagation Delay (µs)
+        self.propagation_delay += added_delay
+        return self.propagation_delay
+
     def increase_used_bandwidth_by(self, bw):
         self._used_bandwidth += bw
         self._available_bandwidth -= bw
@@ -47,7 +52,13 @@ class LinkSpecs:
         self._used_bandwidth -= bw
         self._available_bandwidth += bw
 
+    def increase_bandwidth_by(self, bw):
+        self._bandwidth += bw
+        self._available_bandwidth = self._bandwidth
 
+    def decrease_bandwidth_by(self, bw):
+        self._bandwidth -= bw
+        self._available_bandwidth = self._bandwidth
 
 class Link(ABC):
 

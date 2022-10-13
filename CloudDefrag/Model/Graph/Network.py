@@ -8,6 +8,7 @@ from CloudDefrag.Model.Graph.Node import Node, Server, Router, VirtualMachine, D
 from CloudDefrag.Logging.Logger import Logger
 
 
+
 class Network(EnhancedGraph, ABC):
 
     def __init__(self, **kwargs):
@@ -53,6 +54,9 @@ class Network(EnhancedGraph, ABC):
             node_dict[link.name] = link
             node_dict[link.reverse_name] = link
         return node_dict
+
+    def get_link_by_name(self, name):
+        return self.get_links_dict_full_with_reverse_names()[name]
 
     def add_network_node(self, node: Node, **kwargs):
         self._network_nodes.append(node)
@@ -119,6 +123,7 @@ class PhysicalNetwork(Network):
                 if node.is_gateway:
                     routers.append(node)
         return routers
+
 
 
 

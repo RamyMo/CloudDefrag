@@ -52,3 +52,21 @@ class Specs:
         self.cpu -= decreased_specs.cpu
         self.memory -= decreased_specs.memory
         self.storage -= decreased_specs.storage
+
+    def increase_cpu_by(self, extra_cpu):
+        self.cpu += extra_cpu
+
+    def decrease_cpu_by(self, decreased_cpu):
+        self.cpu -= decreased_cpu
+
+    def increase_memory_by(self, extra_memory):
+        self.memory += extra_memory
+
+    def decrease_memory_by(self, decreased_memory):
+        self.memory -= decreased_memory
+
+    def increase_storage_by(self, extra_storage):
+        self.storage += extra_storage
+
+    def decrease_storage_by(self, decreased_storage):
+        self.storage -= decreased_storage

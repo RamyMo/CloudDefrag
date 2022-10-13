@@ -16,6 +16,14 @@ class RepairResult:
         self._recommended_consts_groups_to_relax =recommended_consts_groups_to_relax
 
     @property
+    def repaired_model(self):
+        return self._model
+
+    @property
+    def is_repaired(self):
+        return self._isRepaired
+
+    @property
     def repair_cost(self):
         return self._repair_cost
 
@@ -86,7 +94,7 @@ class RepairResult:
 
     def print_result_summary(self):
         cost = self.repair_cost
-        print("\n\t\t*** Result Summary ***")
+        print("\n\t\t*** Repair Result Summary ***")
         print("Cost:", cost, "Number of servers:", "Num of Changes:")
         exec_time = self.repair_exec_time
         print("Repair Execution Time: %s seconds" % exec_time)
