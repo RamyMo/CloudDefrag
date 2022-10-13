@@ -166,63 +166,103 @@ def filteringShuffleCover(model):
     print("Execution Time: %s seconds" % exec_time)
 
 
-def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax) -> RepairResult:
+def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
+                recommended_consts_groups_to_relax) -> RepairResult:
     # https://www.gurobi.com/documentation/9.5/refman/py_model_feasrelax.html#pythonmethod:Model.feasRelax
     # print("\nAlgorithm is Elastic Heuristic\n ")
     isRepaired = False
-    start_time = time.time()
-    relax_C1 = True if "C1" in recommended_consts_groups_to_relax else False
-    relax_C2 = True if "C2" in recommended_consts_groups_to_relax else False
-    relax_C3 = True if "C3" in recommended_consts_groups_to_relax else False
-    relax_C4 = True if "C4" in recommended_consts_groups_to_relax else False
+    if "Constraint_Type" in constraints_grouping_method:
+        start_time = time.time()
+        relax_C1 = True if "C1" in recommended_consts_groups_to_relax else False
+        relax_C2 = True if "C2" in recommended_consts_groups_to_relax else False
+        relax_C3 = True if "C3" in recommended_consts_groups_to_relax else False
+        relax_C4 = True if "C4" in recommended_consts_groups_to_relax else False
 
-    # TODO Add a RL agent that will recommend the violConstrs
+        # TODO Add a RL agent that will recommend the violConstrs
 
-    violConstrs = []
-    rhspen = []
-    for c in model.getConstrs():
-        if all_constrs_are_modif:
-            violConstrs.append(c)
-            rhspen.append(1000)
-            continue
-        elif "C1" in c.ConstrName and "cpu" in c.ConstrName and relax_C1:
-            violConstrs.append(c)
-            rhspen.append(1)
-        elif "C1" in c.ConstrName and "memory" in c.ConstrName and relax_C1:
-            violConstrs.append(c)
-            rhspen.append(1)
-        elif "C1" in c.ConstrName and "storage" in c.ConstrName and relax_C1:
-            violConstrs.append(c)
-            rhspen.append(1 / 100)
-        elif "C2" in c.ConstrName and relax_C2:
-            violConstrs.append(c)
-            rhspen.append(1 / 10)
-        elif "C3" in c.ConstrName and relax_C3:
-            violConstrs.append(c)
-            rhspen.append(1000000)
-        elif "C4" in c.ConstrName and relax_C4:
-            violConstrs.append(c)
-            rhspen.append(1000000)
+        violConstrs = []
+        rhspen = []
+        for c in model.getConstrs():
+            if all_constrs_are_modif:
+                violConstrs.append(c)
+                rhspen.append(1000)
+                continue
+            elif "C1" in c.ConstrName and "cpu" in c.ConstrName and relax_C1:
+                violConstrs.append(c)
+                rhspen.append(1)
+            elif "C1" in c.ConstrName and "memory" in c.ConstrName and relax_C1:
+                violConstrs.append(c)
+                rhspen.append(1)
+            elif "C1" in c.ConstrName and "storage" in c.ConstrName and relax_C1:
+                violConstrs.append(c)
+                rhspen.append(1 / 100)
+            elif "C2" in c.ConstrName and relax_C2:
+                violConstrs.append(c)
+                rhspen.append(1 / 10)
+            elif "C3" in c.ConstrName and relax_C3:
+                violConstrs.append(c)
+                rhspen.append(1000000)
+            elif "C4" in c.ConstrName and relax_C4:
+                violConstrs.append(c)
+                rhspen.append(1000000)
 
-        # else:
-        #     violConstrs.append(c)
-        #     rhspen.append(100000)
+            # else:
+            #     violConstrs.append(c)
+            #     rhspen.append(100000)
+    elif "Resource_Location" in constraints_grouping_method:
+        start_time = time.time()
+        violConstrs = []
+        rhspen = []
+        for c in model.getConstrs():
+            location_group = get_constraint_location_group(c.ConstrName)
+            if all_constrs_are_modif:
+                violConstrs.append(c)
+                rhspen.append(1000)
+                continue
+            if location_group in recommended_consts_groups_to_relax:
+                if "C1" in c.ConstrName and "cpu" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1)
+                elif "C1" in c.ConstrName and "memory" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1)
+                elif "C1" in c.ConstrName and "storage" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1 / 100)
+                elif "C2" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1 / 10)
+                elif "C3" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1000000)
+                elif "C4" in c.ConstrName:
+                    violConstrs.append(c)
+                    rhspen.append(1000000)
+            else:
+                continue
+            # else:
+            #     violConstrs.append(c)
+            #     rhspen.append(100000)
 
     # model.optimize()
     model.feasRelax(0, False, None, None, None, violConstrs, rhspen)
+
+    # Set Artificial variables limits by adding constrs
+    for c in violConstrs:
+        limit = get_resource_upgrade_limit(c)
+        var = model.getVarByName(f"ArtN_{c.ConstrName}")
+        model.addConstr(var <= limit, name=f"ArtN_{c.ConstrName}_limit")
 
     # Save repaired model for inspection
     model.write(f'output/repaired-model.lp')
 
     # https://www.gurobi.com/documentation/9.5/refman/presolve.html
     # Set Presolve to 2 to fix the problem of solver giving a zero solution
-    #A value of -1 corresponds to an automatic setting. Other options are off (0), conservative (1), or aggressive (2). More aggressive application of presolve takes more time, but can sometimes lead to a significantly tighter model.
+    # A value of -1 corresponds to an automatic setting. Other options are off (0), conservative (1), or aggressive (2). More aggressive application of presolve takes more time, but can sometimes lead to a significantly tighter model.
     # TODO: Fix: Solution count problem still exist. Solver finds multiple solutions and return the wrong one.
     model.setParam("Presolve", 2)
 
     model.optimize()
-
-    
 
     isRepaired = IISCompute.isFeasible(model)
     cost = 0
@@ -253,7 +293,8 @@ def elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax
 
     exec_time = time.time() - start_time
     # print("Repair Execution Time: %s seconds" % exec_time)
-    result = RepairResult(model, cost, exec_time, "Elastic Heuristic", recommended_consts_groups_to_relax, isRepaired)
+    result = RepairResult(model, cost, exec_time, "Elastic Heuristic", recommended_consts_groups_to_relax, isRepaired,
+                          violConstrs)
     return result
 
 
@@ -295,6 +336,50 @@ def get_model_statistics(model):
     print("C8 is {:0.2f} % of all constrs".format((c8 / num_of_constrs) * 100))
 
 
+def get_constraint_location_group(ConstrName):
+    # Define how network is divided into locations. Follow Diagram in 12-10-2022 Group Meeting Presentation
+    Location_Group = ""
+    L1_matches = ["w3", "s3", "s4"]
+    L2_matches = ["w2", "s8"]
+    L3_matches = ["s1", "s2", "s5", "s6", "s7", "w1"]
+    L4_matches = ["w6"]
+    L5_matches = ["s9", "s10", "s11", "w7", "w8", "w4", "w5"]
+
+    if any(x in ConstrName for x in L1_matches):
+        Location_Group = "L1"
+    elif any(x in ConstrName for x in L2_matches):
+        Location_Group = "L2"
+    elif any(x in ConstrName for x in L3_matches):
+        Location_Group = "L3"
+    elif any(x in ConstrName for x in L4_matches):
+        Location_Group = "L4"
+    elif any(x in ConstrName for x in L5_matches):
+        Location_Group = "L5"
+
+    return Location_Group
+
+
+def get_resource_upgrade_limit(c):
+    compute_resource_factor = 100
+    bw_factor = 100
+    e2e_delay_factor = 5
+    propg_delay_factor = 10
+    limit = None
+    if "C1" in c.ConstrName and "cpu" in c.ConstrName:
+        limit = 1 * compute_resource_factor
+    elif "C1" in c.ConstrName and "memory" in c.ConstrName:
+        limit = 1 * compute_resource_factor
+    elif "C1" in c.ConstrName and "storage" in c.ConstrName:
+        limit = 1000 * compute_resource_factor
+    elif "C2" in c.ConstrName:
+        limit = 100 * bw_factor
+    elif "C3" in c.ConstrName:
+        limit = (10 ** -3) * e2e_delay_factor
+    elif "C4" in c.ConstrName:
+        limit = (10 ** -6) * propg_delay_factor
+    return limit
+
+
 class InfeasAnalyzer:
     def __init__(self, model, **kwargs) -> None:
         # print("\n \t\t*** Printing Model Info. for Inf. Analysis ***")
@@ -318,6 +403,8 @@ class InfeasAnalyzer:
         return self._RepairResult
 
     def repair_infeas(self, **kwargs):
+        constraints_grouping_method = kwargs[
+            "constraints_grouping_method"] if "constraints_grouping_method" in kwargs else "Constraint_Type"
         self.algorithm = kwargs["algorithm"] if "algorithm" in kwargs else "ElasticHeur"
         # algorithm = "ElasticHeur"  # Algorithm used to find IISes: "Filtering", "FilteringShuffle","FilteringShuffleCover" "Enum", "Pivoting", "ElasticHeur" (In Progress)
         model = self._model
@@ -337,7 +424,8 @@ class InfeasAnalyzer:
         elif self.algorithm == "FilteringShuffleCover":
             filteringShuffleCover(model)
         elif self.algorithm == "ElasticHeur":
-            self._RepairResult = elasticHeur(model, all_constrs_are_modif, recommended_consts_groups_to_relax)
+            self._RepairResult = elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
+                                             recommended_consts_groups_to_relax)
 
     def apply_infeas_repair(self, net: PhysicalNetwork, hosted_requests: List[HostedVMRequest],
                             new_requests: List[NewVMRequest]):

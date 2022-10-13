@@ -49,7 +49,17 @@ def main():
     else:
         inf_analyzer = InfeasAnalyzer(algo.model)
         # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False, recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+
+        # grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
+
+        grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
+
+        # inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+        #                            recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+
+        inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+                                   recommeded_consts_groups_to_relax="[L1, L3]")
+
         repair_result = inf_analyzer.result
         repair_result.print_result()
 

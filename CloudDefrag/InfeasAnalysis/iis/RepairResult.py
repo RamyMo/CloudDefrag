@@ -6,14 +6,22 @@ import numpy as np
 
 class RepairResult:
 
-    def __init__(self, model, repair_cost, repair_exec_time, algorithm, recommended_consts_groups_to_relax, isRepaired)\
-            -> None:
+    def __init__(self, model, repair_cost, repair_exec_time, algorithm, recommended_consts_groups_to_relax, isRepaired,
+                 violConstrs)-> None:
+        self._violConstrs = violConstrs
         self._isRepaired = isRepaired
         self._model = model
         self._repair_cost = repair_cost
         self._repair_exec_time = repair_exec_time
         self._algorithm = algorithm
         self._recommended_consts_groups_to_relax =recommended_consts_groups_to_relax
+
+    @property
+    def violable_Constrs(self):
+        return self._violConstrs
+    @property
+    def number_of_violable_constrs(self):
+        return len(self._violConstrs)
 
     @property
     def repaired_model(self):
@@ -95,6 +103,7 @@ class RepairResult:
     def print_result_summary(self):
         cost = self.repair_cost
         print("\n\t\t*** Repair Result Summary ***")
+        print(f"Number of Vilable Constraints: {self.number_of_violable_constrs}")
         print("Cost:", cost, "Number of servers:", "Num of Changes:")
         exec_time = self.repair_exec_time
         print("Repair Execution Time: %s seconds" % exec_time)

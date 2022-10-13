@@ -242,20 +242,23 @@ class RamyILP:
             e2e_delay_req = new_req.e2e_delay
             link_vars = new_req.new_vlinks_assign_vars
             vlink_prop_delay_term = link_vars.prod(new_req.requested_vlinks_prop_delay)
+            gw_name = new_req.gateway_router.node_name
             new_req.e2e_delay_constr = self._model.addConstr(vlink_prop_delay_term <= e2e_delay_req,
-                                                             name=f"C3_new_req{new_req.request_id}_e2e_delay")
+                                                             name=f"C3_new_req{new_req.request_id}_e2e_delay_{gw_name}")
 
         for hosted_req in self._hosted_requests:
             e2e_delay_req = hosted_req.e2e_delay
             link_vars = hosted_req.hosted_vlinks_assign_vars
             vlink_prop_delay_term = link_vars.prod(hosted_req.hosted_vlinks_prop_delay)
+            gw_name = new_req.gateway_router.node_name
             hosted_req.e2e_delay_constr = self._model.addConstr(vlink_prop_delay_term <= e2e_delay_req,
-                                                                name=f"C3_hosted_req{hosted_req.request_id}_e2e_delay")
+                                                                name=f"C3_hosted_req{hosted_req.request_id}_e2e_delay_{gw_name}")
 
     def __create_prop_delay_constrs(self):
         # Propagation delay Constraints:  (Group C4)
         plinks_dict = self._physical_links_dict
         for new_req in self._new_requests:
+            gw_name = new_req.gateway_router.node_name
             link_vars = new_req.new_vlinks_assign_vars
             vlinks_dict = new_req.requested_vlinks_dict
             for vlink in new_req.requested_vlinks_names:
@@ -266,8 +269,9 @@ class RamyILP:
                                                         self._physical_links)
                 vlinks_dict[vlink].prop_delay_req_constr = \
                     self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay,
-                                          name=f"C4_new_req{new_req.request_id}_vlink_{vlink}_prop_delay")
+                                          name=f"C4_new_req{new_req.request_id}_vlink_{vlink}_prop_delay_{gw_name}")
         for hosted_req in self._hosted_requests:
+            gw_name = new_req.gateway_router.node_name
             link_vars = hosted_req.hosted_vlinks_assign_vars
             vlinks_dict = hosted_req.hosted_vlinks_dict
             for vlink in hosted_req.hosted_vlinks_names:
@@ -278,7 +282,7 @@ class RamyILP:
                                                         in self._physical_links)
                 vlinks_dict[vlink].prop_delay_req_constr = \
                     self._model.addConstr(vlink_prop_delay_req_term <= req_prop_delay,
-                                          name=f"C4_hosted_req{hosted_req.request_id}_vlink_{vlink}_prop_delay")
+                                          name=f"C4_hosted_req{hosted_req.request_id}_vlink_{vlink}_prop_delay_{gw_name}")
 
     def __create_flow_conservation_constr(self):
         # Flow Conservation Constraints:  (Group C5)
