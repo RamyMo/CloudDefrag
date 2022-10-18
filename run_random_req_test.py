@@ -11,6 +11,7 @@ from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router, DummyVi
 from CloudDefrag.Model.Graph.Specs import Specs
 from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
 from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
+import numpy as np
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -49,7 +50,7 @@ def main():
         # Create the requests
         hosted_requests = input_parser.get_all_hosted_requests()
         # new_requests = input_parser.get_all_new_requests()
-        new_requests = input_parser.get_random_new_requests_from_gateway("w3",
+        new_requests, req_dist = input_parser.get_random_new_requests_from_gateway("w3",
                                                                          seed_number=seed)  # This bypass requests dist. file
         input_parser.assign_hosted_requests()
 
@@ -65,8 +66,12 @@ def main():
             # Without Agent Recommendation
             inf_analyzer = InfeasAnalyzer(algo.model)
             # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-            inf_analyzer.repair_infeas(all_constrs_are_modif=False,
+
+            grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
+
+            inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
                                        recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+
             repair_result = inf_analyzer.result
             average_repair_time_without_agent += repair_result.repair_exec_time
             average_cost_without_agent += repair_result.repair_cost
@@ -75,11 +80,22 @@ def main():
             # repair_result.print_result()
 
             # With Agent Recommendation
+            q_table = np.load(f"output/Q-tables/2000-qtable.npy")
             algo = RamyILP(net, new_requests, hosted_requests)
             inf_analyzer = InfeasAnalyzer(algo.model)
-            # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
-            inf_analyzer.repair_infeas(all_constrs_are_modif=False,
-                                       recommeded_consts_groups_to_relax="[C1]")
+            recommended_constraints = "C2"
+            current_state = [0, 0, 0, 0, 0, req_dist[0], req_dist[1], req_dist[2]]
+            # for i in range(5):
+            #     current_selection = np.argmax(q_table[tuple(current_state)])+1
+            #     if current_selection == 6:
+            #         break
+            #     else:
+            #         recommended_constraints += f" L{current_selection} "
+
+            grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
+            inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+                                       recommeded_consts_groups_to_relax=recommended_constraints)
+
             repair_result = inf_analyzer.result
             average_repair_time_with_agent += repair_result.repair_exec_time
             if repair_result.is_repaired:

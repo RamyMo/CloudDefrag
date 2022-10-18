@@ -4,7 +4,7 @@ from gurobipy.gurobipy import Model
 from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
 from CloudDefrag.InfeasAnalysis.iis import IISCompute
 from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
-from CloudDefrag.QLearning.Inf_Env import Inf_Env
+from CloudDefrag.QLearning.Inf_Env import Inf_Env, Inf_Env_Location
 from CloudDefrag.QLearning.Qlearning import Qlearning
 import numpy as np
 import time
@@ -26,6 +26,12 @@ if isfeasible:
 else:
     print("Model verified to be infeasible")
     env = Inf_Env("output/RamyILP Model.lp")
+
+    network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
+    network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"
+    agent_gateway = "w3"
+    # env = Inf_Env_Location(network_nodes_file, network_connections_file, agent_gateway)
+
     qlearn = Qlearning(env)
     start_time = time.time()
     qlearn.learn()

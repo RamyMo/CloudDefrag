@@ -18,7 +18,13 @@ from CloudDefrag.Parsing.OutputParser import OutputParser
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisualizer
 
 
+# TODO: Improve Network Visualization
+
 def main():
+    # Input Parameters
+    enable_infeas_repair = False
+    make_random_new_requests = False
+
     # Create the network
     net = PhysicalNetwork(name="Net1")
     # network_nodes_file = "input/RegionalTopo/01-NetworkNodes.csv"
@@ -30,12 +36,15 @@ def main():
     # Draw the network topology
     net_visual = NetworkVisualizer(net)
     net_visual.plot()
+    net_visual.interactive_visual()
 
     # Create the requests
     hosted_requests = input_parser.get_all_hosted_requests()
-    new_requests = input_parser.get_all_new_requests()
-    # new_requests = input_parser.get_random_new_requests_from_gateway("w3",
-    #                                                                  seed_number=1)  # This bypass requests dist. file
+    if make_random_new_requests:
+        new_requests, req_dist = input_parser.get_random_new_requests_from_gateway("w3",
+                                                                                   seed_number=0)  # This bypass requests dist. file
+    else:
+        new_requests = input_parser.get_all_new_requests()
     input_parser.assign_hosted_requests()
 
     # VNF Placement
@@ -46,19 +55,20 @@ def main():
         algo.apply_result()
         out_parser = OutputParser(net, hosted_requests, new_requests)
         out_parser.parse_request_assignments()
-    else:
+    elif enable_infeas_repair:
+        # Repair Infeas
         inf_analyzer = InfeasAnalyzer(algo.model)
         # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
 
-        # grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
+        grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
 
-        grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
-
-        # inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-        #                            recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+        # grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
 
         inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-                                   recommeded_consts_groups_to_relax="[L1, L3]")
+                                   recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+
+        # inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+        #                            recommeded_consts_groups_to_relax="[L1]")
 
         repair_result = inf_analyzer.result
         repair_result.print_result()

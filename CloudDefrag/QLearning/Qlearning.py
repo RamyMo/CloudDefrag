@@ -18,7 +18,7 @@ class Qlearning:
         # Q-Learning settings
         self._learning_rate = kwargs["learning_rate"] if "learning_rate" in kwargs else 0.1
         self._discount_factor = kwargs["discount_factor"] if "discount_factor" in kwargs else 0.95
-        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 100
+        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 2000
 
         # Exploration settings
         self._epsilon = kwargs["epsilon"] if "epsilon" in kwargs else 1  # not a constant, qoing to be decayed
@@ -26,10 +26,11 @@ class Qlearning:
         self._end_epsilon_decaying = kwargs["end_epsilon_decaying"] if "end_epsilon_decaying" in kwargs \
             else self._num_of_episodes // 2
         self._epsilon_decay_value = self._epsilon / (self._end_epsilon_decaying - self._start_epsilon_decaying)
+        self._number_of_steps_per_episode = 10
 
         # Results Window Size
         # Results Window size is 1000 Episodes
-        self._show_every = kwargs["show_every"] if "show_every" in kwargs else 10
+        self._show_every = kwargs["show_every"] if "show_every" in kwargs else 100
 
         # Create the Q-table
         self._q_table = np.random.uniform(low=env.lowest_possible_reward, high=env.highest_possible_reward,
@@ -81,7 +82,6 @@ class Qlearning:
                 else:
                     # Get random action
                     action = env.get_random_action()
-
                 new_discrete_state, reward, done = env.step(action)
                 episode_reward += reward
                 if episode % SHOW_EVERY == 0:

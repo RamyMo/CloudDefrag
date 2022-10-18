@@ -115,6 +115,14 @@ class AdvancedModel:
         model.update()
         return model
 
+    def dropModifiableConstraintsGroupbyLocation(self, constraints_group):
+        model = self.model.copy()
+        for c in model.getConstrs():
+            if any(x in c.ConstrName for x in constraints_group):
+                model.remove(c)
+        model.update()
+        return model
+
 
         #Return a new copy of the model after adding the given constraint (For Additive Filter)
     def addConstraint(self, sourceModel, constraint):  

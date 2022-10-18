@@ -213,19 +213,21 @@ class InputParser:
         self._new_requests = new_requests
         return new_requests
 
-    def get_random_new_requests_from_gateway(self, gateway_name, seed_number) -> List[NewVMRequest]:
-        print_dist = True
+    def get_random_new_requests_from_gateway(self, gateway_name, **kwargs):
+        seed_number = kwargs["seed_number"] if "seed_number" in kwargs else None
+        print_dist = False
         new_requests = []
         net = self._net
         # seed random number generator
-        seed(seed_number)
+        if seed_number is not None:
+            seed(seed_number)
         if gateway_name not in net.get_node_dict().keys():
             print("Wrong Gateway!")
             return
         gateway_router = net.get_node_dict()[gateway_name]
-        num_of_type1 = randint(0, 10)
-        num_of_type2 = randint(0, 10)
-        num_of_type3 = randint(0, 10)
+        num_of_type1 = randint(0, 9)
+        num_of_type2 = randint(0, 9)
+        num_of_type3 = randint(0, 9)
         if print_dist:
             print(f"Req. Dist at {gateway_name}: ({num_of_type1}, {num_of_type2}, {num_of_type3})")
         for i in range(num_of_type1):
@@ -235,8 +237,8 @@ class InputParser:
         for i in range(num_of_type3):
             new_requests.append(self.create_new_request(3, gateway_router))
 
-
-        return new_requests
+        req_dist = [num_of_type1, num_of_type2, num_of_type3]
+        return new_requests, req_dist
 
     def get_all_hosted_requests(self) -> List[HostedVMRequest]:
         hosted_requests_dist_file = self._hosted_requests_dist_file

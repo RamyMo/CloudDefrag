@@ -1,5 +1,6 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import pyvis
 
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
 
@@ -24,6 +25,12 @@ class NetworkVisualizer:
         net_name = self._net.name
         plt.savefig(f"output/{net_name}.png")
 
+    def interactive_visual(self):
+        # create vis network
+        vis_net = pyvis.network.Network(notebook=True)
+        vis_net.from_nx(self._net)
+        #TODO fix the problem here
+        vis_net.show("example.html")
 class RequestVisualizer:
     #TODO: Fix RequestVisualizer
     def __init__(self, net: VirtualNetwork) -> None:
