@@ -77,6 +77,7 @@ def main():
         # inf_analyzer.apply_infeas_repair(net, hosted_requests, new_requests)
         # algo = RamyILP(net, new_requests, hosted_requests)
         # algo.solve(display_result=True)
+    net_visual.interactive_visual()
     print("Done")
 
 
