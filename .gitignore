@@ -9,7 +9,7 @@ idea
 notes.txt
 
 # Output Folder
-output/
+#output/
  
 # Log file
 output/log.log

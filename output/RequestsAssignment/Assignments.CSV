@@ -1,0 +1,9 @@
+Request ID,Hosted or New,Name,VM or vLink?,Source,Target,Host
+1,new,vm0_1,VM,NA,NA,w3
+1,new,vm1_1,VM,NA,NA,s3
+1,new,vm2_1,VM,NA,NA,s3
+1,new,vm3_1,VM,NA,NA,s3
+1,new,"(vm0_1,vm1_1)",vLink,vm0_1,vm1_1,"(s3,w3)
+"
+1,new,"(vm1_1,vm2_1)",vLink,vm1_1,vm2_1,
+1,new,"(vm2_1,vm3_1)",vLink,vm2_1,vm3_1,
