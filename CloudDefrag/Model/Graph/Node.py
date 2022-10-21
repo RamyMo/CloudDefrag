@@ -163,6 +163,11 @@ class Server(PhysicalNode):
         available_storage = self.specs.storage - self.used_specs.storage
         return Specs(cpu=available_cpu, memory=available_memory, storage=available_storage)
 
+    #TODO: Design server_cost_coefficient
+    @property
+    def server_cost_coefficient(self) -> float:
+        return 1.0
+
     def can_server_host_vm(self, vm: Node) -> bool:
         required_cpu = vm.specs.cpu
         required_memory = vm.specs.memory
@@ -215,6 +220,10 @@ class Router(PhysicalNode):
         super().__init__(**kwargs)
         self._is_gateway = kwargs["is_gateway"] if "is_gateway" in kwargs else None
         self._hosted_dummy_vms = []
+        # Incoming requests from gw routers
+        self._type1_requests = []
+        self._type2_requests = []
+        self._type3_requests = []
         Logger.log.info(f"Created a Router named {self.node_name}")
 
     def __str__(self) -> str:
@@ -236,12 +245,31 @@ class Router(PhysicalNode):
     def hosted_dummy_vms(self, value):
         self._hosted_dummy_vms = value
 
+    @property
+    def type1_requests(self):
+        return self._type1_requests
+
+    @property
+    def type2_requests(self):
+        return self._type2_requests
+
+    @property
+    def type3_requests(self):
+        return self._type3_requests
+
     def add_dummy_vm(self, vm):
         self._hosted_dummy_vms.append(vm)
 
     def remove_dummy_vm(self, vm):
         self._hosted_dummy_vms.remove(vm)
-
+    def attach_request_to_gateway_router(self, request, request_type):
+        if self.is_gateway:
+            if request_type == 1:
+                self._type1_requests.append(request)
+            elif request_type == 2:
+                self._type2_requests.append(request)
+            elif request_type == 3:
+                self._type3_requests.append(request)
 
 class Switch(PhysicalNode):
 

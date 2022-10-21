@@ -107,6 +107,7 @@ class InputParser:
                                  network_edges=vlinks)
         new_request = NewVMRequest(req_net, net, gateway_router, request_type=req_type)
         new_request.e2e_delay = e2e_delay
+        gateway_router.attach_request_to_gateway_router(new_request, req_type)
 
         return new_request
 
@@ -165,13 +166,13 @@ class InputParser:
                     migration_coeff = float(row["Migration Coeff"])
                     isDummy = not bool(vm_index)
                     if isDummy:
-                        vm = DummyVirtualMachine(node_name=f"vm{vm_index}_{VMRequest.get_new_request_id()}",
+                        vm = DummyVirtualMachine(node_name=f"vnf{vm_index}_{VMRequest.get_new_request_id()}",
                                                  node_label="Dummy Virtual Machine", vm_revenue_coeff=revenue_coeff,
                                                  vm_migration_coeff=migration_coeff)
                         vms.append(vm)
                     else:
                         vm = VirtualMachine(specs=Specs(cpu=cpu, memory=memory, storage=storage),
-                                            node_name=f"vm{vm_index}_{VMRequest.get_new_request_id()}",
+                                            node_name=f"vnf{vm_index}_{VMRequest.get_new_request_id()}",
                                             node_label="Virtual Machine", vm_revenue_coeff=revenue_coeff,
                                             vm_migration_coeff=migration_coeff)
                         vms.append(vm)

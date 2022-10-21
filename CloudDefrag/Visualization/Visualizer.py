@@ -34,7 +34,31 @@ class NetworkVisualizer:
         vis_net = pyvis.network.Network(notebook=True)
         # vis_net.from_nx(self._net)
         from_nx_to_pyvis(vis_net, nx_graph=self._net)
+
+        # vis_net.show_buttons(filter_=['physics'])
+        # vis_net.show_buttons(filter_=['nodes'])
+        vis_net.set_options("""
+        const options = {
+          "physics": {
+            "barnesHut": {
+              "avoidOverlap": 1
+            }
+          },
+          "nodes": {
+            "borderWidth": 7,
+            "borderWidthSelected": 17,
+            "font": {
+              "size": 18
+            },
+            "shadow": {
+              "enabled": true
+            },
+            "size": null
+          }
+        }
+        """)
         vis_net.show("output/Visualization/net.html")
+
 
 
 class RequestVisualizer:
@@ -63,7 +87,7 @@ def from_nx_to_pyvis(pyvis_net, nx_graph, default_node_size=20, default_edge_wei
     assert (isinstance(nx_graph, nx.Graph))
     edges = nx_graph.edges(data=True)
     nodes = nx_graph.nodes(data=True)
-    default_node_options = {"size": default_node_size, "shape": "circle"}
+    default_node_options = {"size": default_node_size}
     default_edge_options = {"width": default_edge_weight, "color": "black"}
     if len(edges) > 0:
         for e in edges:
@@ -83,18 +107,28 @@ def get_node_options(nx_node_options, node, default_node_options):
 
     if isinstance(node, Server):
         server = node
-        title = f"[{server.specs.cpu} CPUs, {server.specs.memory} GB RAM, {server.specs.storage} GB Storage]"
+        title = f"[{server.available_specs.cpu} CPUs, {server.available_specs.memory} GB RAM," \
+                f" {server.available_specs.storage} GB Storage]"
         node_options["title"] = title
         if server.hosted_virtual_machines:
-            node_options["title"] +=" \n"
+            node_options["label"] +=" \n"
             for vnf in server.hosted_virtual_machines:
-                node_options["title"] += f" {vnf.node_name} \n"
+                node_options["label"] += f" {vnf.node_name} \n"
 
     elif isinstance(node, Router):
         router = node
 
         if router.is_gateway:
             title = f"Gateway Router"
+            type1_requests = router.type1_requests
+            num_of_type1 = len(type1_requests)
+            type2_requests = router.type2_requests
+            num_of_type2 = len(type2_requests)
+            type3_requests = router.type3_requests
+            num_of_type3 = len(type3_requests)
+            node_options["label"] += f" \n [{num_of_type1}, {num_of_type2}, {num_of_type3}]"
+            for vm in router.hosted_dummy_vms:
+                node_options["label"] += f" \n {vm.node_name}"
         else:
             title = f"Router"
         node_options["title"] = title

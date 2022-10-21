@@ -9,15 +9,15 @@ from CloudDefrag.Model.Graph.Node import DummyVirtualMachine, Server
 
 
 class Algorithm(ABC):
+    """Algorithm abstract class is used for any algorithm that is solved via solver like Guroubi"""
     def __init__(self, net: PhysicalNetwork, new_requests: List[NewVMRequest], hosted_requests: List[HostedVMRequest],
                  **kwargs) \
             -> None:
+        self._model_name = kwargs["model_name"] if "model_name" in kwargs else "RamyILP Model"
+        self._model = gp.Model(self._model_name)
         self._network = net
         self._hosted_requests = hosted_requests
         self._new_requests = new_requests
-        # Create Gurobi Model
-        self._model_name = kwargs["model_name"] if "model_name" in kwargs else "ILP-Model"
-        self._model = gp.Model(self._model_name)
 
         # Physical Network Infrastructure
         self._servers = net.get_servers()
@@ -32,7 +32,11 @@ class Algorithm(ABC):
         self._physical_links_names = [vl.name for vl in self._physical_links]
         self._physical_links_dict = net.get_links_dict()
 
+        Logger.log.info(f"Created an instance of ILP algorithm for model {self._model_name}.")
+        self._create_problem_model()
 
+        # Save model for inspection
+        self._model.write(f'output/{self._model_name}.lp')
 
     @property
     def model(self) -> gp.Model:
@@ -109,13 +113,8 @@ class Algorithm(ABC):
     def _create_dummy_vm_constrs(self):
         pass
 
-    @abstractmethod
-    def _create_requested_vms_dicts(self):
-        pass
 
-    @abstractmethod
-    def _create_hosted_vms_dicts(self):
-        pass
+
 
     # Run optimization engine
     def solve(self, **kwargs):

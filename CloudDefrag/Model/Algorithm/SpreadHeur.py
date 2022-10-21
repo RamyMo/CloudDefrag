@@ -10,10 +10,7 @@ from CloudDefrag.Model.Graph.Node import VirtualMachine, Router, Server, DummyVi
 from CloudDefrag.Logging.Logger import Logger
 
 
-class RamyILP(Algorithm):
-    """
-        RamyILP is ILP algorithm that that takes into account hosted and new requests and model vnf migration
-    """
+class SpreadHeur(Algorithm):
     def __init__(self, net: PhysicalNetwork, new_requests: List[NewVMRequest], hosted_requests: List[HostedVMRequest],
                  **kwargs) \
             -> None:

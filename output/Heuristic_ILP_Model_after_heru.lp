@@ -1,4 +1,4 @@
-\ Model RamyILP Model
+\ Model Heuristic_ILP_Model
 \ LP format - for model browsing. Use MPS format to capture full model detail.
 Minimize
   new_assign[vnf0_1,s1] + new_assign[vnf0_1,s2] + new_assign[vnf0_1,s3]
@@ -1694,6 +1694,12 @@ Subject To
    + new_assign[vnf5_1,s8] + new_assign[vnf5_1,s9] + new_assign[vnf5_1,s10]
    + new_assign[vnf5_1,s11] = 1
  C8_req1_dummy_vm: new_assign[vnf0_1,w3] = 1
+ BinpackHeur_req1_dummy_vnf: new_assign[vnf0_1,w3] = 1
+ BinpackHeur_req1_vnf1_1: new_assign[vnf1_1,s3] = 1
+ BinpackHeur_req1_vnf2_1: new_assign[vnf2_1,s3] = 1
+ BinpackHeur_req1_vnf4_1: new_assign[vnf4_1,s3] = 1
+ BinpackHeur_req1_vnf3_1: new_assign[vnf3_1,s1] = 1
+ BinpackHeur_req1_vnf5_1: new_assign[vnf5_1,s1] = 1
 Bounds
 Binaries
  new_assign[vnf0_1,s1] new_assign[vnf0_1,s2] new_assign[vnf0_1,s3]

@@ -1,4 +1,4 @@
-\ Model RamyILP Model
+\ Model Heuristic_ILP_Model
 \ LP format - for model browsing. Use MPS format to capture full model detail.
 Minimize
   new_assign[vnf0_1,s1] + new_assign[vnf0_1,s2] + new_assign[vnf0_1,s3]

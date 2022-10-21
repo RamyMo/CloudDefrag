@@ -1,9 +1,15 @@
 Request ID,Hosted or New,Name,VM or vLink?,Source,Target,Host
-1,new,vm0_1,VM,NA,NA,w3
-1,new,vm1_1,VM,NA,NA,s3
-1,new,vm2_1,VM,NA,NA,s3
-1,new,vm3_1,VM,NA,NA,s3
-1,new,"(vm0_1,vm1_1)",vLink,vm0_1,vm1_1,"(s3,w3)
+1,new,vnf0_1,VM,NA,NA,w3
+1,new,vnf1_1,VM,NA,NA,s3
+1,new,vnf2_1,VM,NA,NA,s3
+1,new,vnf3_1,VM,NA,NA,s1
+1,new,vnf4_1,VM,NA,NA,s3
+1,new,vnf5_1,VM,NA,NA,s1
+1,new,"(vnf0_1,vnf1_1)",vLink,vnf0_1,vnf1_1,"(s3,w3)
 "
-1,new,"(vm1_1,vm2_1)",vLink,vm1_1,vm2_1,
-1,new,"(vm2_1,vm3_1)",vLink,vm2_1,vm3_1,
+1,new,"(vnf1_1,vnf2_1)",vLink,vnf1_1,vnf2_1,
+1,new,"(vnf1_1,vnf4_1)",vLink,vnf1_1,vnf4_1,
+1,new,"(vnf2_1,vnf3_1)",vLink,vnf2_1,vnf3_1,"(s1,s3)
+"
+1,new,"(vnf4_1,vnf5_1)",vLink,vnf4_1,vnf5_1,"(s1,s3)
+"

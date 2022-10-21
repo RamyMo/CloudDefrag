@@ -64,7 +64,7 @@ class Network(EnhancedGraph, ABC):
 
     def add_network_edge(self, edge: Link, **kwargs):
         self._network_edges.append(edge)
-        self.add_edge(edge.source, edge.target, object=edge)
+        self.add_edge(edge.source, edge.target, object=edge, weight=edge.link_specs.propagation_delay)
 
     def get_link_between(self, n1: Node, n2: Node) -> Link:
         return self.get_edge_data(n1, n2)["object"]
