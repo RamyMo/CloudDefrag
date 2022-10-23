@@ -46,6 +46,9 @@ class Heuristic(ABC):
         Logger.log.info(f"Created an instance of ILP algorithm for model {self._model_name}.")
         self._create_problem_model()
 
+        # Heursitic Results
+        self._heuristic_result = HeuristicResult()
+
         # Save model for inspection
         self._model.write(f'output/{self._model_name}_before_heru.lp')
 
@@ -70,6 +73,20 @@ class Heuristic(ABC):
         sorted_lengths = sort_dictionary_by_value(lengths)
         return sorted_lengths
 
+    def get_shorted_path_between_two_nodes(self, source, target):
+        path = nx.shortest_path(self.network, source=source, target=target, weight="weight")
+        return path
+
+    def get_shorted_path_between_two_nodes_as_edges(self, source, target):
+        path = nx.shortest_path(self.network, source=source, target=target, weight="weight")
+        number_of_edges = len(path)-1
+        edges = []
+        for i in range(number_of_edges):
+            source_node = path[i]
+            target_node = path[i+1]
+            edge = self.network[source][target]["object"]
+            edges.append(edge)
+        return edges
     @property
     def model(self) -> gp.Model:
         return self._model
@@ -120,6 +137,10 @@ class Heuristic(ABC):
     @name.setter
     def name(self, value):
         self._heuristic_name = value
+
+    @property
+    def heuristic_result(self):
+        return self._heuristic_result
 
     def _create_problem_model(self):
         # Create decision variables for the model
@@ -414,6 +435,37 @@ class Heuristic(ABC):
                 pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
                 if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
                     vl.add_hosting_physical_link(pl)
+
+
+class HeuristicResult():
+    def __init__(self) -> None:
+        self._heuristic_model = None  # ILP model after adding decision constraints (used for verification)
+        self._requests_vnf_assignments_dict = {}  # Maps requests to their vnf assignments dict
+        self._requests_vlinks_assignments_dict = {} # Maps requests to their vlinks assignments dict
+        self._heuristic_name = None  # Heuristic used to solve the problem
+
+    @property
+    def heuristic_model(self):
+        return self._heuristic_model
+
+    @heuristic_model.setter
+    def heuristic_model(self, value):
+        self._heuristic_model = value
+
+    @property
+    def requests_vnf_assignments_dict(self):
+        return self._requests_vnf_assignments_dict
+
+    @property
+    def requests_vlinks_assignments_dict(self):
+        return self._requests_vlinks_assignments_dict
+    @property
+    def heuristic_name(self):
+        return self._heuristic_name
+
+    @heuristic_name.setter
+    def heuristic_name(self, value):
+        self._heuristic_name = value
 
 
 def sort_dictionary_by_value(dict):

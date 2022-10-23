@@ -30,7 +30,7 @@ class Network(EnhancedGraph, ABC):
     def network_edges(self):
         return self._network_edges
 
-    def get_links(self) -> List[Link]:
+    def get_links(self) -> List:
         links = []
         for source, target, attributes in self.edges(data=True):
             links.append(attributes['object'])

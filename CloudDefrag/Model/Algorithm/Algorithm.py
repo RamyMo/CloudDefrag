@@ -223,3 +223,7 @@ class Algorithm(ABC):
                 pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
                 if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
                     vl.add_hosting_physical_link(pl)
+
+class AlgorithmResult():
+    pass
+    # TODO: implement AlgorithmResult
