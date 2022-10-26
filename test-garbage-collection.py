@@ -1,84 +1,76 @@
-#!/usr/bin/python3
-# The main code of the Simulator
-import networkx
-
+import gurobipy as gp
+from gurobipy import GRB
+from gurobipy.gurobipy import Model
+from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
+from CloudDefrag.InfeasAnalysis.iis import IISCompute
+from CloudDefrag.InfeasAnalysis.iis.ModelLib import AdvancedModel
+from CloudDefrag.InfeasAnalysis.iis.RepairResult import RepairResult
 from CloudDefrag.Model.Algorithm.ArisILP import ArisILP
 from CloudDefrag.Model.Algorithm.BinpackHeur import BinpackHeur
 from CloudDefrag.Model.Algorithm.RamyILP import RamyILP
-from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
-from CloudDefrag.Model.Graph.Link import VirtualLink, LinkSpecs, PhysicalLink
-from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
-from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router, DummyVirtualMachine
-from CloudDefrag.Model.Graph.Specs import Specs
-from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
-import matplotlib.pyplot as plt
-import networkx as nx
-
+from CloudDefrag.Model.Graph.Network import PhysicalNetwork
 from CloudDefrag.Parsing.InputParser import InputParser
-from CloudDefrag.Parsing.OutputParser import OutputParser
-from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisualizer
+from CloudDefrag.QLearning.Inf_Env import Inf_Env, Inf_Env_Location
+from CloudDefrag.QLearning.Qlearning import Qlearning
+import tracemalloc
+import numpy as np
+import time
 
-
-# TODO: Improve Network Visualization
 
 def main():
-    # Input Parameters
-    enable_infeas_repair = True
-    make_random_new_requests = False
-    algorithm_name = "RamyILP"
+    tracemalloc.start()
+    algos = []
+    adv_models = []
+    for i in range(20):
+        snapshot1 = tracemalloc.take_snapshot()
+        algos.append(get_algo_instance())
+        adv_models.append(AdvancedModel(algos[i].model))
+        snapshot2 = tracemalloc.take_snapshot()
+        stats = snapshot2.compare_to(snapshot1, 'lineno')
+        print(f"After creating algo No. {i+1}")
+        for stat in stats[:10]:
+            print(stat)
 
+    for i in range(20):
+        snapshot1 = tracemalloc.take_snapshot()
+        algos[i].model.dispose()
+        algos[i] = None
+        adv_models[i].model.dispose()
+        adv_models[i] = None
+        snapshot2 = tracemalloc.take_snapshot()
+        stats = snapshot2.compare_to(snapshot1, 'lineno')
+        print(f"After disposing algo No. {i+1}")
+        for stat in stats[:10]:
+            print(stat)
+
+
+    for i in range(60):
+        snapshot1 = tracemalloc.take_snapshot()
+        time.sleep(1)
+        snapshot2 = tracemalloc.take_snapshot()
+        stats = snapshot2.compare_to(snapshot1, 'lineno')
+        print(f"After {i+1} seconds of disposing")
+        for stat in stats[:10]:
+            print(stat)
+
+
+
+
+
+def get_algo_instance():
+    algorithm_name = "RamyILP"
     # Create the network
     net, input_parser = create_network("Net1")
-
-    # Draw the network topology
-    net_visual = NetworkVisualizer(net)
-    net_visual.plot()
-
     # Create the requests
+    make_random_new_requests = True
     hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
 
     # Apply the placement of the hosted requests (if any)
     input_parser.assign_hosted_requests()
-
-    # VNF Placement
-    # TODO: fix differences between objective functions of RamyILP and BinpackHeur
-
     algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
-
-    # Solve the formulated problem
-    algo.solve(display_result=True)
-
-    # Check Feasibility
-    if algo.isFeasible:
-        algo.apply_result()
-        out_parser = OutputParser(net, hosted_requests, new_requests)
-        out_parser.parse_request_assignments()
-    elif enable_infeas_repair:
-        # Repair Infeas
-        inf_analyzer = InfeasAnalyzer(algo.model)
-        grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
-        recommended_constraints = "[L1, L2, L3, L4, L5]"
-        #TODO: get recommended_constraints from the agent
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-                                   recommeded_consts_groups_to_relax=recommended_constraints)
-
-        repair_result = inf_analyzer.result
-        repair_result.print_result()
-
-        # Apply repair and resolve
-        if repair_result.is_repaired:
-            inf_analyzer.apply_infeas_repair(net, hosted_requests, new_requests)
-            new_algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
-            new_algo.solve(display_result=True)
-            # Todo: when number of requests of type 2 exceeds 9:repair_result.is_repaired is true but new_algo.isFeasible is false
-            if new_algo.isFeasible:
-                algo.apply_result()
-                out_parser = OutputParser(net, hosted_requests, new_requests)
-                out_parser.parse_request_assignments()
-    else:
-        print("Model is Infeasible")
-    net_visual.interactive_visual()
-    print("Done")
+    # # Solve the formulated problem
+    # algo.solve(display_result=True)
+    return algo
 
 
 def create_network(network_name):

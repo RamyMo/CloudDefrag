@@ -14,6 +14,7 @@ from CloudDefrag.Parsing.OutputParser import OutputParser
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer
 from CloudDefrag.InfeasAnalysis.iis import IISCompute
 from CloudDefrag.InfeasAnalysis.iis.ModelLib import AdvancedModel
+import gc
 
 
 class Inf_Env:
@@ -248,10 +249,6 @@ class Inf_Env:
 class Inf_Env_Location:
 
     def __init__(self, network_nodes_file, network_connections_file, agent_gateway, **kwargs) -> None:
-        # self._model_path = model_path
-        # self._original_model = gp.read(model_path)
-        # self._advanced_original_model = AdvancedModel(self._original_model)
-        # self._modified_model = gp.read(model_path)
 
         # Create the network for training
         self._net = PhysicalNetwork(name="Net1_Training")
@@ -266,11 +263,10 @@ class Inf_Env_Location:
         self._new_requests_initial, self._req_dist_initial = self._input_parser.get_random_new_requests_from_gateway \
             (self.agent_gateway, seed_number=0)  # This bypass requests dist. file
         self._new_requests_current, self._req_dist_current = self._new_requests_initial, self._req_dist_initial
-        self._initial_algo = RamyILP(self._net, self._new_requests_initial, self._hosted_requests_initial)
-        self._initial_model = self._initial_algo.model
 
-        self._current_algo = self._initial_algo
-        self._current_model = self._initial_model
+        self._current_algo = None
+        self._current_model = None      # self._current_model and self._modified_model are same
+        self._modified_model = None
 
         # Initialize Time
         self.current_time_step = 0
@@ -303,10 +299,13 @@ class Inf_Env_Location:
 
         # Q-table
         # Keeping size simple for now
-        self._q_table_size = (2, 2, 2, 2, 2, 10, 10, 10, self._action_space_size)
+        self._q_table_size = (2, 2, 2, 2, 2, 10, self._action_space_size)
+
+        # self._initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0],
+        #                        self._req_dist_initial[1], self._req_dist_initial[2])  # (L1, L2, L3, L4, L5, T1, T2, T3)
 
         self._initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0],
-                               self._req_dist_initial[1], self._req_dist_initial[2])  # (L1, L2, L3, L4, L5, T1, T2, T3)
+                               )  # (L1, L2, L3, L4, L5, T1)
 
         self._current_state = self._initial_state
 
@@ -333,10 +332,6 @@ class Inf_Env_Location:
     @modified_model.setter
     def modified_model(self, model):
         self._modified_model = model
-
-    @property
-    def advanced_modified_model(self):
-        return AdvancedModel(self.modified_model)
 
     @property
     def is_modified_model_feasible(self):
@@ -407,14 +402,26 @@ class Inf_Env_Location:
 
     def reset(self):
         # Return initial state
+        # Todo: optimize memory usage for self._new_requests_current, self._current_algo, self._current_model
         self._new_requests_current, self._req_dist_current = self._input_parser.get_random_new_requests_from_gateway \
             (self.agent_gateway)  # This bypass requests dist. file
+
+        # Dispose old current_algo model
+        if self._current_algo:
+            self._current_algo.model.dispose()
+            self._current_algo.model = None
+            self._current_algo = None
+
         self._current_algo = RamyILP(self._net, self._new_requests_current, self._hosted_requests_initial)
         self._current_model = self._current_algo.model
-        initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0],
-                         self._req_dist_initial[1], self._req_dist_initial[2])  # (L1, L2, L3, L4, L5, T1, T2, T3)
+
+        # initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0],
+        #                  self._req_dist_initial[1], self._req_dist_initial[2])  # (L1, L2, L3, L4, L5, T1, T2, T3)
+
+        initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0])  # (L1, L2, L3, L4, L5, T1)
+
         self.current_state = initial_state
-        self.modified_model = self._current_algo.model
+        self.modified_model = self._current_algo.model              # Note this statement
         return initial_state
 
     def get_random_action(self):
@@ -453,9 +460,13 @@ class Inf_Env_Location:
                 else:  # Constraint was not relaxed before
                     new_state_as_list[action] = 1
                     new_state = tuple(new_state_as_list)
+
                     # Relax the corresponding constraint group
-                    self.modified_model = self.advanced_modified_model.dropModifiableConstraintsGroupbyLocation(
-                        self.location_constrs_dict[action])
+                    constraints_group = self.location_constrs_dict[action]
+                    for c in self.modified_model.getConstrs():
+                        if any(x in c.ConstrName for x in constraints_group):
+                            self.modified_model.remove(c)
+                    self.modified_model.update()
 
                     if IISCompute.isFeasible(self.modified_model):
                         reward += self.fixed_infeasibility_reward
@@ -492,3 +503,26 @@ class Inf_Env_Location:
         repair_result = inf_analyzer.result
         cost, time = repair_result.repair_cost, repair_result.repair_exec_time
         return cost, time
+
+    def garbage_collector(self):
+        self._current_model.dispose()
+        self._current_model = None
+        self._current_algo = None
+        # gp.disposeDefaultEnv()
+        for req in self._new_requests_current:
+            req.new_vms_assign_vars = None
+            req.new_vlinks_assign_vars = None
+            req.requested_vlink_revenue_dict = None
+            req.requested_vlink_prop_delay_dict = None
+            req.requested_vlink_cost_dict = None
+            req.requested_vlink_assign_dict = None
+            req.requested_vlinks_prop_delay = None
+            req.requested_vlinks_revenue = None
+            req.requested_vlinks_combinations = None
+            req.requested_vms_combinations = None
+            req.requested_vlinks_cost = None
+            req.requested_vms_servers_assign_dict = None
+            req.requested_vms_servers_cost_dict = None
+            req.requested_vms_servers_revenue_dict = None
+            req = None
+

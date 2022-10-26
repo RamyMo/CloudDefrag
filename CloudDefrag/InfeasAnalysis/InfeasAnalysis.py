@@ -232,12 +232,15 @@ def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
                 elif "C2" in c.ConstrName:
                     violConstrs.append(c)
                     rhspen.append(1 / 10)
-                elif "C3" in c.ConstrName:
-                    violConstrs.append(c)
-                    rhspen.append(1000000)
-                elif "C4" in c.ConstrName:
-                    violConstrs.append(c)
-                    rhspen.append(1000000)
+                #Todo: Fix: Resource_Location doesn't take into account relaxing C3 or C4
+
+                # elif "C3" in c.ConstrName:
+                #     violConstrs.append(c)
+                #     rhspen.append(1000000)
+                # elif "C4" in c.ConstrName:
+                #     violConstrs.append(c)
+                #     rhspen.append(1000000)
+
             else:
                 continue
             # else:
@@ -360,8 +363,8 @@ def get_constraint_location_group(ConstrName):
 
 
 def get_resource_upgrade_limit(c):
-    compute_resource_factor = 100
-    bw_factor = 100
+    compute_resource_factor = 30
+    bw_factor = 40
     e2e_delay_factor = 5
     propg_delay_factor = 10
     limit = None
@@ -437,22 +440,28 @@ class InfeasAnalyzer:
                     if "C1" in var.VarName:
                         server_name = re.search('C1_(.+?)_', var.VarName).group(1)
                         server = net.get_node_by_name(server_name)
+                        server.is_selected_for_feas_repair = True
                         if "cpu" in var.VarName:
                             server.specs.increase_cpu_by(var.X)
+                            server.repair_specs.increase_cpu_by(var.X)
                             Logger.log.info(f"Increased number of CPU cores of server {server_name} by {var.X} cores "
                                             f"new value is: {server.specs.cpu} cores")
                         elif "memory" in var.VarName:
                             server.specs.increase_memory_by(var.X)
+                            server.repair_specs.increase_memory_by(var.X)
                             Logger.log.info(f"Increased memory of server {server_name} by {var.X} GB "
                                             f"new value is: {server.specs.memory} GB")
                         elif "storage" in var.VarName:
                             server.specs.increase_storage_by(var.X)
+                            server.repair_specs.increase_storage_by(var.X)
                             Logger.log.info(f"Increased storage of server {server_name} by {var.X} GB "
                                             f"new value is: {server.specs.storage} GB")
                     elif "C2" in var.VarName:
                         link_name = re.search('C2_(.+?)_', var.VarName).group(1)
                         link = net.get_link_by_name(link_name)
+                        link.is_selected_for_feas_repair = True
                         link.link_specs.increase_bandwidth_by(var.X)
+                        link.link_repair_specs.increase_bandwidth_by(var.X)
                         Logger.log.info(f"Increased bandwidth of link {link_name} by {var.X} Mbps "
                                         f"new value is: {link.link_specs.bandwidth} Mbps")
                     elif "C3" in var.VarName:
@@ -461,13 +470,17 @@ class InfeasAnalyzer:
                         is_new = True if "new" in var.VarName else False
                         if is_new:
                             request = new_requests[req_index]
+                            request.is_selected_for_feas_repair = True
                             request.e2e_delay += var.X
+                            request.extra_e2e_delay_repair += var.X
                             Logger.log.info(f"Increased the E2E delay requirement of new request No. {req_number} "
                                             f"by {var.X} µs "
                                             f"new value is: {request.e2e_delay} µs")
                         else:
                             request = hosted_requests[req_index]
+                            request.is_selected_for_feas_repair = True
                             request.e2e_delay += var.X
+                            request.extra_e2e_delay_repair += var.X
                             Logger.log.info(
                                 f"Increased the E2E delay requirement of hosted request No. {req_number} by {var.X} µs "
                                 f"new value is: {request.e2e_delay} µs")
@@ -479,8 +492,10 @@ class InfeasAnalyzer:
 
                         if is_new:
                             request = new_requests[req_index]
+                            request.is_selected_for_feas_repair = True
                             vlink = request.requested_vlinks_dict[link_name]
                             vlink.link_specs.increase_propagation_delay_by(var.X)
+                            request.extra_prop_delay_per_link_repair_dict[vlink] = var.X
 
                             Logger.log.info(
                                 f"Increased the propagation delay requirement of new request No. {req_number} "
@@ -488,8 +503,10 @@ class InfeasAnalyzer:
                                 f"{vlink.link_specs.propagation_delay} µs")
                         else:
                             request = hosted_requests[req_index]
+                            request.is_selected_for_feas_repair = True
                             vlink = request.hosted_vlinks_dict[link_name]
                             vlink.link_specs.increase_propagation_delay_by(var.X)
+                            request.extra_prop_delay_per_link_repair_dict[vlink] = var.X
                             Logger.log.info(
                                 f"Increased the propagation delay requirement of hosted request No. {req_number} "
                                 f"vLink {link_name} by {var.X} µs new value is: "

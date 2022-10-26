@@ -43,7 +43,7 @@ class Algorithm(ABC):
         return self._model
 
     @model.setter
-    def model(self, value: gp.Model):
+    def model(self, value):
         self._model = value
 
     # Takes Gurobi model as an input and return True if model is feasible and False o.w
@@ -118,6 +118,11 @@ class Algorithm(ABC):
 
     # Run optimization engine
     def solve(self, **kwargs):
+        # Solves return non-integral values for integer variables
+        # https://www.gurobi.com/documentation/9.5/refman/integralityfocus.html
+        # https://support.gurobi.com/hc/en-us/articles/360012237872-Why-does-Gurobi-sometimes-return-non-integral-values-for-integer-variables-
+        self._model.setParam("IntegralityFocus", 1);
+
         self._model.optimize()
         Logger.log.info(f"Solving problem model {self._model_name} using RamyILP...")
         if self.isFeasible:
@@ -126,7 +131,7 @@ class Algorithm(ABC):
                 self.display_result()
         else:
             Logger.log.info(f"Model {self._model_name} is infeasible")
-            # print(f"Model {self._model_name} is infeasible")
+            print(f"Model {self._model_name} is infeasible")
     # Display Results
     def display_result(self):
         print("\n*******************************************************")
@@ -223,6 +228,8 @@ class Algorithm(ABC):
                 pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
                 if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
                     vl.add_hosting_physical_link(pl)
+
+
 
 class AlgorithmResult():
     pass

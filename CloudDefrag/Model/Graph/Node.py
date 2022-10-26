@@ -16,6 +16,8 @@ class Node(ABC):
         self._node_name = kwargs["node_name"] if "node_name" in kwargs else None
         self._node_label = kwargs["node_label"] if "node_label" in kwargs else None
         self._weight = kwargs["weight"] if "weight" in kwargs else None
+        self._is_selected_for_feas_repair = False   # True if the node is selected by feas repair method
+        self._repair_specs = Specs(cpu=0, memory=0, storage=0)
 
     @property
     def weight(self):
@@ -44,6 +46,22 @@ class Node(ABC):
     @node_label.setter
     def node_label(self, value: str):
         self._node_label = value
+
+    @property
+    def is_selected_for_feas_repair(self):
+        return self._is_selected_for_feas_repair
+
+    @is_selected_for_feas_repair.setter
+    def is_selected_for_feas_repair(self, value):
+        self._is_selected_for_feas_repair = value
+
+    @property
+    def repair_specs(self):
+        return self._repair_specs
+
+    @repair_specs.setter
+    def repair_specs(self, value):
+        self._repair_specs = value
 
     def __str__(self) -> str:
         return self._node_name

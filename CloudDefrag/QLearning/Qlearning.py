@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import style
 from mpl_toolkits.mplot3d import axes3d
-
+import tracemalloc
 from CloudDefrag.QLearning.VNF_Env import VNF_Env
 
 
@@ -45,6 +45,12 @@ class Qlearning:
         return self._q_table
 
     def learn(self) -> None:
+        tracemalloc_enabled = False
+
+        if tracemalloc_enabled:
+            tracemalloc.start()         # Start monitoring the memory for leaks
+
+
         EPISODES = self._num_of_episodes
         SHOW_EVERY = self._show_every
         env = self.env
@@ -62,9 +68,21 @@ class Qlearning:
         current_best_cost = -1
         current_best_time = -1
 
-        for episode in range(0, EPISODES + 1):
-            episode_reward = 0
+        if tracemalloc_enabled:
+            snapshot = tracemalloc.take_snapshot()
+            top_stats = snapshot.statistics('lineno')
+            print("[ Top 10 ] before episodes loop")
+            for stat in top_stats[:10]:
+                print(stat)
 
+
+
+        for episode in range(0, EPISODES + 1):
+
+            if tracemalloc_enabled:
+                snapshot1 = tracemalloc.take_snapshot()
+
+            episode_reward = 0
             if episode % SHOW_EVERY == 0:
                 print(episode)
                 render = True
@@ -100,7 +118,7 @@ class Qlearning:
                     # Update Q table with new Q value
                     q_table[discrete_state + (action,)] = new_q
                     discrete_state = new_discrete_state
-                # Simulation ended (for any reson) - if goal position is achived - update Q value with reward directly
+                # Simulation ended (for any reason) - if goal position is achived - update Q value with reward directly
                 else:   # End of Episode (Terminal State)
                     # print(f"We allocated all requests on episode: {episode}")
                     # q_table[discrete_state + (action,)] = reward
@@ -149,6 +167,17 @@ class Qlearning:
                 print(
                     f'Episode: {episode:>5d}, average reward: {average_reward:>4.1f}, current epsilon: {epsilon:>1.2f}')
                 np.save(f"output/Q-tables/{episode}-qtable.npy", q_table)
+            # Todo: collect garbage here
+            self.env.garbage_collector()
+
+            if tracemalloc_enabled:
+                snapshot2 = tracemalloc.take_snapshot()
+                stats = snapshot2.compare_to(snapshot1, 'lineno')
+                print(f"[ Top 10 ] after episode {episode}")
+                for stat in stats[:10]:
+                    print(stat)
+
+
 
     def plot(self):
         aggr_ep_rewards = self._aggr_ep_rewards

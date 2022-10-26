@@ -1,8 +1,8 @@
 import random
 import numpy as np
 
-from CloudDefrag.Model.Algorithm.BinPack import BinPack
-from CloudDefrag.Model.Algorithm.Spread import Spread
+from CloudDefrag.Model.Algorithm.BinpackHeur import BinpackHeur
+from CloudDefrag.Model.Algorithm.SpreadHeur import SpreadHeur
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
@@ -129,7 +129,7 @@ class VNF_Env:
         reward = 0  # Initial value for reward
 
         if action == 0:  # A0: Bin-Pack
-            algo = BinPack(self._net, self._new_requests, self._hosted_requests, model_name=f"BinPack")
+            algo = BinpackHeur(self._net, self._new_requests, self._hosted_requests, model_name=f"BinPack")
             algo.solve(display_result=False)
             if algo.isFeasible:
                 algo.apply_result()
@@ -142,7 +142,7 @@ class VNF_Env:
             new_state = (self._net.compute_index, self._net.communication_index, self.request_index)
 
         elif action == 1:  # A1: Spread
-            algo = Spread(self._net, self._new_requests, self._hosted_requests, model_name=f"Spread")
+            algo = SpreadHeur(self._net, self._new_requests, self._hosted_requests, model_name=f"Spread")
             algo.solve(display_result=False)
             if algo.isFeasible:
                 algo.apply_result()

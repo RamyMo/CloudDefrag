@@ -2,7 +2,6 @@
 # The main code of the Simulator
 import networkx
 
-from CloudDefrag.Model.Algorithm.HouILP import HouILP
 from CloudDefrag.Model.Algorithm.RamyILP import RamyILP
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
 from CloudDefrag.Model.Graph.Link import VirtualLink, LinkSpecs, PhysicalLink

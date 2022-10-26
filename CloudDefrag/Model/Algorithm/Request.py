@@ -19,8 +19,11 @@ class VMRequest(ABC):
         self._virtual_net = virtual_net
         self._physical_net = physical_net
         self._e2e_delay = kwargs["e2e_delay"] if "e2e_delay" in kwargs else None
+        self._extra_e2e_delay_repair = 0
+        self._extra_prop_delay_per_link_repair_dict = {}
         self._request_type = kwargs["request_type"] if "request_type" in kwargs else None
         self._gateway_router = gateway_router
+        self._is_selected_for_feas_repair = False
         virtual_net.get_dummy_vm().gateway_router = self._gateway_router
 
         VMRequest._latest_request_id += 1
@@ -79,6 +82,25 @@ class VMRequest(ABC):
     def gateway_router(self, gw):
         self._gateway_router = gw
 
+    @property
+    def is_selected_for_feas_repair(self):
+        return self._is_selected_for_feas_repair
+
+    @is_selected_for_feas_repair.setter
+    def is_selected_for_feas_repair(self, value):
+        self._is_selected_for_feas_repair = value
+
+    @property
+    def extra_e2e_delay_repair (self):
+        return self._extra_e2e_delay_repair
+
+    @extra_e2e_delay_repair .setter
+    def extra_e2e_delay_repair (self, value):
+        self._extra_e2e_delay_repair = value
+
+    @property
+    def extra_prop_delay_per_link_repair_dict (self):
+        return self._extra_prop_delay_per_link_repair_dict
 
 class HostedVMRequest(VMRequest):
 
@@ -276,8 +298,7 @@ class NewVMRequest(VMRequest):
         self._requested_vlink_prop_delay_dict = {}  # Prop delay of assignment of all new vlinks to plinks
         self._requested_vlinks_object_combinations = None
         self.__create_requested_vlinks_dicts()
-        self._requested_vlinks_combinations, self._requested_vlinks_cost = \
-            gp.multidict(self._requested_vlink_cost_dict)
+        self._requested_vlinks_combinations, self._requested_vlinks_cost = gp.multidict(self._requested_vlink_cost_dict)
         _, self._requested_vlinks_revenue = gp.multidict(self._requested_vlink_revenue_dict)
         _, self._requested_vlinks_prop_delay = gp.multidict(self._requested_vlink_prop_delay_dict)
         # New vlinks Assignment variables
@@ -306,6 +327,10 @@ class NewVMRequest(VMRequest):
     def requested_vlinks_cost(self):
         return self._requested_vlinks_cost
 
+    @requested_vlinks_cost.setter
+    def requested_vlinks_cost(self, value):
+        self._requested_vlinks_cost = value
+
     @property
     def new_vms_assign_vars(self):
         return self._x
@@ -329,6 +354,8 @@ class NewVMRequest(VMRequest):
             self._requested_vms_servers_assign_dict[(i[0].node_name, i[1].node_name)] = 0
             self._requested_vms_servers_cost_dict[(i[0].node_name, i[1].node_name)] = i[1].server_cost_coefficient
             self._requested_vms_servers_revenue_dict[(i[0].node_name, i[1].node_name)] = i[0].vm_revenue_coeff
+
+        requested_vms_servers_combination = None
 
     def __create_requested_vlinks_dicts(self):
         requested_vlinks_combination = list(itertools.product(self._requested_vlinks, self.physical_net.get_links()))
@@ -355,13 +382,23 @@ class NewVMRequest(VMRequest):
     def requested_vlinks_combinations(self):
         return self._requested_vlinks_combinations
 
+    @requested_vlinks_combinations.setter
+    def requested_vlinks_combinations(self, value):
+        self._requested_vlinks_combinations = value
+
     @property
     def requested_vlinks_object_combinations(self):
         return self.__requested_vlinks_object_combinations
 
+
+
     @property
     def requested_vms_combinations(self):
         return self._requested_vms_combinations
+
+    @requested_vms_combinations.setter
+    def requested_vms_combinations(self, value):
+        self._requested_vms_combinations = value
 
     @property
     def requested_vms_servers_revenue(self):
@@ -378,3 +415,67 @@ class NewVMRequest(VMRequest):
     @property
     def requested_vms_names(self):
         return self._requested_vms_names
+
+    @property
+    def requested_vlink_revenue_dict(self):
+        return self._requested_vlink_revenue_dict
+
+    @requested_vlink_revenue_dict.setter
+    def requested_vlink_revenue_dict(self, value):
+        self._requested_vlink_revenue_dict = value
+
+    @property
+    def requested_vlink_prop_delay_dict(self):
+        return self._requested_vlink_prop_delay_dict
+
+    @requested_vlink_prop_delay_dict.setter
+    def requested_vlink_prop_delay_dict(self, value):
+        self._requested_vlink_prop_delay_dict = value
+
+    @property
+    def requested_vlink_cost_dict(self):
+        return self._requested_vlink_cost_dict
+
+    @requested_vlink_cost_dict.setter
+    def requested_vlink_cost_dict(self, value):
+        self._requested_vlink_cost_dict = value
+
+    @property
+    def requested_vlink_assign_dict(self):
+        return self._requested_vlink_assign_dict
+
+    @requested_vlink_assign_dict.setter
+    def requested_vlink_assign_dict(self, value):
+        self._requested_vlink_assign_dict = value
+
+    @property
+    def requested_vlinks_revenue(self):
+        return self._requested_vlinks_revenue
+
+    @requested_vlinks_revenue.setter
+    def requested_vlinks_revenue(self, value):
+        self._requested_vlinks_revenue = value
+
+    @property
+    def requested_vms_servers_assign_dict(self):
+        return self._requested_vms_servers_assign_dict
+
+    @requested_vms_servers_assign_dict.setter
+    def requested_vms_servers_assign_dict(self, value):
+        self._requested_vms_servers_assign_dict = value
+
+    @property
+    def requested_vms_servers_cost_dict(self):
+        return self._requested_vms_servers_cost_dict
+
+    @requested_vms_servers_cost_dict.setter
+    def requested_vms_servers_cost_dict(self, value):
+        self._requested_vms_servers_cost_dict = value
+
+    @property
+    def requested_vms_servers_revenue_dict(self):
+        return self._requested_vms_servers_revenue_dict
+
+    @requested_vms_servers_revenue_dict.setter
+    def requested_vms_servers_revenue_dict(self, value):
+        self._requested_vms_servers_revenue_dict = value

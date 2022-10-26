@@ -68,7 +68,8 @@ class Link(ABC):
         self._target = kwargs["target"] if "target" in kwargs else None
         self._weight = kwargs["weight"] if "weight" in kwargs else None
         self._weight = kwargs["link_score"] if "link_score" in kwargs else None
-
+        self._is_selected_for_feas_repair = False  # True if the link is selected by feas repair method
+        self._link_repair_specs = LinkSpecs(bandwidth=0, propagation_delay=0)
     def __str__(self) -> str:
         return f"Link {self._source} to {self._target}"
 
@@ -121,6 +122,22 @@ class Link(ABC):
     @target.setter
     def target(self, value):
         self._target = value
+
+    @property
+    def is_selected_for_feas_repair(self):
+        return self._is_selected_for_feas_repair
+
+    @is_selected_for_feas_repair.setter
+    def is_selected_for_feas_repair(self, value):
+        self._is_selected_for_feas_repair = value
+
+    @property
+    def link_repair_specs(self):
+        return self._link_repair_specs
+
+    @link_repair_specs.setter
+    def link_repair_specs(self, value):
+        self._link_repair_specs = value
 
 
 class PhysicalLink(Link):
