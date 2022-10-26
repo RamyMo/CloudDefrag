@@ -1,5 +1,5 @@
 import time
-import cv2
+# import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,7 +18,7 @@ class Qlearning:
         # Q-Learning settings
         self._learning_rate = kwargs["learning_rate"] if "learning_rate" in kwargs else 0.1
         self._discount_factor = kwargs["discount_factor"] if "discount_factor" in kwargs else 0.95
-        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 2000
+        self._num_of_episodes = kwargs["num_of_episodes"] if "num_of_episodes" in kwargs else 4000
 
         # Exploration settings
         self._epsilon = kwargs["epsilon"] if "epsilon" in kwargs else 1  # not a constant, qoing to be decayed
@@ -240,17 +240,17 @@ class Qlearning:
             plt.savefig(f"output/Q-tables/Q-tables Charts/{i}.png")
             plt.clf()
 
-    def generate_qtables_video(self):
-        # # windows:
-        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        # Linux:
-        fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-        out = cv2.VideoWriter('output/Q-tables/Q-tables Charts/Qlearn.avi', fourcc, 0.2, (1200, 900))
-        print("Generating Q-tables video ...")
-        for i in range(0, self._num_of_episodes + self._show_every, self._show_every):
-            img_path = f"output/Q-tables/Q-tables Charts/{i}.png"
-            # print(img_path)
-            frame = cv2.imread(img_path)
-            out.write(frame)
-
-        out.release()
+    # def generate_qtables_video(self):
+    #     # # windows:
+    #     # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    #     # Linux:
+    #     fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+    #     out = cv2.VideoWriter('output/Q-tables/Q-tables Charts/Qlearn.avi', fourcc, 0.2, (1200, 900))
+    #     print("Generating Q-tables video ...")
+    #     for i in range(0, self._num_of_episodes + self._show_every, self._show_every):
+    #         img_path = f"output/Q-tables/Q-tables Charts/{i}.png"
+    #         # print(img_path)
+    #         frame = cv2.imread(img_path)
+    #         out.write(frame)
+    #
+    #     out.release()

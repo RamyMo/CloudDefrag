@@ -30,8 +30,8 @@ def main():
     input_parser = InputParser(net, network_nodes_file=network_nodes_file,
                                network_connections_file=network_connections_file)
     # Draw the network topology
-    net_visual = NetworkVisualizer(net)
-    net_visual.plot()
+    # net_visual = NetworkVisualizer(net)
+    # net_visual.plot()
 
     number_of_iterations = 100
     average_repair_time_without_agent = 0
@@ -42,6 +42,7 @@ def main():
     success_ratio_with_agent = 0
     average_cost_with_agent = 0
 
+    number_of_correct_recommendation = 0
     for i in range(number_of_iterations):
         print(f"Iteration: {i}")
         seed = i + 1
@@ -49,14 +50,14 @@ def main():
         # Create the requests
         hosted_requests = input_parser.get_all_hosted_requests()
         # new_requests = input_parser.get_all_new_requests()
-        new_requests, req_dist = input_parser.get_random_new_requests_from_gateway("w3",
+        new_requests, req_dist = input_parser.get_random_new_requests_from_gateway_type1("w3",
                                                                          seed_number=seed)  # This bypass requests dist. file
         input_parser.assign_hosted_requests()
 
         # VNF Placement
         algo = RamyILP(net, new_requests, hosted_requests)
         algo.solve(display_result=True)
-
+        print(f"Number of requests = {req_dist[0]}")
         if algo.isFeasible:
             algo.apply_result()
             out_parser = OutputParser(net, hosted_requests, new_requests)
@@ -66,63 +67,72 @@ def main():
             inf_analyzer = InfeasAnalyzer(algo.model)
             # inf_analyzer.repair_infeas(all_constrs_are_modif=False)
 
-            grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
+            grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
 
             inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-                                       recommeded_consts_groups_to_relax="[C1, C2, C3, C4]")
+                                       recommeded_consts_groups_to_relax="[L1, L2, L3, L4, L5]")
 
             repair_result = inf_analyzer.result
-            average_repair_time_without_agent += repair_result.repair_exec_time
-            average_cost_without_agent += repair_result.repair_cost
-            if repair_result.is_repaired:
-                success_ratio_without_agent += 1
+            selected_groups_without_agent = repair_result.selected_consts_groups_to_relax
+            print(f"Selected constraints without agent: {selected_groups_without_agent}")
+            # average_repair_time_without_agent += repair_result.repair_exec_time
+            # average_cost_without_agent += repair_result.repair_cost
+            # if repair_result.is_repaired:
+            #     success_ratio_without_agent += 1
             # repair_result.print_result()
 
             # With Agent Recommendation
-            q_table = np.load(f"output/Q-tables/2000-qtable.npy")
-            algo = RamyILP(net, new_requests, hosted_requests)
-            inf_analyzer = InfeasAnalyzer(algo.model)
-            recommended_constraints = "C2"
-            current_state = [0, 0, 0, 0, 0, req_dist[0], req_dist[1], req_dist[2]]
-            # for i in range(5):
-            #     current_selection = np.argmax(q_table[tuple(current_state)])+1
-            #     if current_selection == 6:
-            #         break
-            #     else:
-            #         recommended_constraints += f" L{current_selection} "
+            q_table = np.load(f"output/Q-tables/4000-qtable.npy")
+            # algo = RamyILP(net, new_requests, hosted_requests)
+            # inf_analyzer = InfeasAnalyzer(algo.model)
+            recommended_constraints = []
+            # current_state = [0, 0, 0, 0, 0, req_dist[0], req_dist[1], req_dist[2]]
+            current_state = [0, 0, 0, 0, 0, req_dist[0]]
+            for i in range(5):
+                current_selection = np.argmax(q_table[tuple(current_state)])+1
+                if current_selection == 6:
+                    break
+                else:
+                    if f"L{current_selection}" not in recommended_constraints:
+                        recommended_constraints.append(f"L{current_selection}")
+                        current_state[current_selection - 1] = 1
+            print(f"Recommended constraints by agent: {recommended_constraints}")
 
-            grouping_method = "Constraint_Type"  # "Resource_Location" or "Constraint_Type"
-            inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-                                       recommeded_consts_groups_to_relax=recommended_constraints)
+            if all(l in recommended_constraints for l in selected_groups_without_agent):
+                number_of_correct_recommendation += 1
 
-            repair_result = inf_analyzer.result
-            average_repair_time_with_agent += repair_result.repair_exec_time
-            if repair_result.is_repaired:
-                success_ratio_with_agent += 1
-                average_cost_with_agent += repair_result.repair_cost
+            # grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
+            # inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+            #                            recommeded_consts_groups_to_relax=recommended_constraints)
+            #
+            # repair_result = inf_analyzer.result
+            # average_repair_time_with_agent += repair_result.repair_exec_time
+            # if repair_result.is_repaired:
+            #     success_ratio_with_agent += 1
+            #     average_cost_with_agent += repair_result.repair_cost
             # repair_result.print_result()
 
 
-    print("Done")
-    average_repair_time_without_agent = average_repair_time_without_agent / number_of_iterations
-    success_ratio_without_agent = (success_ratio_without_agent / number_of_iterations) * 100
-    average_cost_without_agent = average_cost_without_agent / number_of_iterations
+    # print("Done")
+    # average_repair_time_without_agent = average_repair_time_without_agent / number_of_iterations
+    # success_ratio_without_agent = (success_ratio_without_agent / number_of_iterations) * 100
+    # average_cost_without_agent = average_cost_without_agent / number_of_iterations
+    #
+    # average_repair_time_with_agent = average_repair_time_with_agent / success_ratio_with_agent
+    # average_cost_with_agent = average_cost_with_agent / success_ratio_with_agent
+    # success_ratio_with_agent = (success_ratio_with_agent / number_of_iterations) * 100
+    #
+    #
+    # print("\nRandom Test Result")
+    # print("\nWithout Agent:")
+    # print(f"Average Execution Time: {average_repair_time_without_agent}")
+    # print(f"Average Repair Cost: {average_cost_without_agent}")
+    # print(f"Success Ratio: {success_ratio_without_agent}")
+    # print("\nWith Agent")
+    # print(f"Average Execution Time: {average_repair_time_with_agent}")
+    # print(f"Average Repair Cost: {average_cost_with_agent}")
+    # print(f"Success Ratio: {success_ratio_with_agent}")
 
-    average_repair_time_with_agent = average_repair_time_with_agent / success_ratio_with_agent
-    average_cost_with_agent = average_cost_with_agent / success_ratio_with_agent
-    success_ratio_with_agent = (success_ratio_with_agent / number_of_iterations) * 100
-
-
-    print("\nRandom Test Result")
-    print("\nWithout Agent:")
-    print(f"Average Execution Time: {average_repair_time_without_agent}")
-    print(f"Average Repair Cost: {average_cost_without_agent}")
-    print(f"Success Ratio: {success_ratio_without_agent}")
-    print("\nWith Agent")
-    print(f"Average Execution Time: {average_repair_time_with_agent}")
-    print(f"Average Repair Cost: {average_cost_with_agent}")
-    print(f"Success Ratio: {success_ratio_with_agent}")
-
-
+    print(f"Number of correct recommendations = {number_of_correct_recommendation}")
 if __name__ == '__main__':
     main()

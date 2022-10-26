@@ -260,8 +260,8 @@ class Inf_Env_Location:
         # Get the requests for initial state
         self._hosted_requests_initial = self._input_parser.get_all_hosted_requests()
         # new_requests = input_parser.get_all_new_requests()
-        self._new_requests_initial, self._req_dist_initial = self._input_parser.get_random_new_requests_from_gateway \
-            (self.agent_gateway, seed_number=0)  # This bypass requests dist. file
+        self._new_requests_initial, self._req_dist_initial = \
+            self._input_parser.get_random_new_requests_from_gateway_type1(self.agent_gateway, seed_number=0)  # This bypass requests dist. file
         self._new_requests_current, self._req_dist_current = self._new_requests_initial, self._req_dist_initial
 
         self._current_algo = None
@@ -299,7 +299,7 @@ class Inf_Env_Location:
 
         # Q-table
         # Keeping size simple for now
-        self._q_table_size = (2, 2, 2, 2, 2, 10, self._action_space_size)
+        self._q_table_size = (2, 2, 2, 2, 2, self._action_space_size)
 
         # self._initial_state = (0, 0, 0, 0, 0, self._req_dist_initial[0],
         #                        self._req_dist_initial[1], self._req_dist_initial[2])  # (L1, L2, L3, L4, L5, T1, T2, T3)
@@ -403,8 +403,8 @@ class Inf_Env_Location:
     def reset(self):
         # Return initial state
         # Todo: optimize memory usage for self._new_requests_current, self._current_algo, self._current_model
-        self._new_requests_current, self._req_dist_current = self._input_parser.get_random_new_requests_from_gateway \
-            (self.agent_gateway)  # This bypass requests dist. file
+        self._new_requests_current, self._req_dist_current = \
+            self._input_parser.get_random_new_requests_from_gateway_type1(self.agent_gateway)  # This bypass requests dist. file
 
         # Dispose old current_algo model
         if self._current_algo:

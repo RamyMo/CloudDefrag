@@ -1,2 +1,12 @@
 Request ID,Hosted or New,Name,VM or vLink?,Source,Target,Host
 1,new,vnf0_1,VM,NA,NA,w3
+1,new,vnf1_1,VM,NA,NA,s3
+1,new,vnf2_1,VM,NA,NA,s1
+1,new,vnf3_1,VM,NA,NA,s9
+1,new,"(vnf0_1,vnf1_1)",vLink,vnf0_1,vnf1_1,"(s3,w3)
+"
+1,new,"(vnf1_1,vnf2_1)",vLink,vnf1_1,vnf2_1,"(s1,s3)
+"
+1,new,"(vnf2_1,vnf3_1)",vLink,vnf2_1,vnf3_1,"(s1,w6)
+(s9,w6)
+"

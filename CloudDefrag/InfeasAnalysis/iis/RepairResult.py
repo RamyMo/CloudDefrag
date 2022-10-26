@@ -15,6 +15,7 @@ class RepairResult:
         self._repair_exec_time = repair_exec_time
         self._algorithm = algorithm
         self._recommended_consts_groups_to_relax =recommended_consts_groups_to_relax
+        self._selected_consts_groups_to_relax = self.get_selected_consts_location_groups_to_relax()
 
     @property
     def violable_Constrs(self):
@@ -46,6 +47,14 @@ class RepairResult:
     @property
     def recommended_consts_groups_to_relax(self):
         return self._recommended_consts_groups_to_relax
+
+    @property
+    def selected_consts_groups_to_relax(self):
+        return self._selected_consts_groups_to_relax
+
+    @selected_consts_groups_to_relax.setter
+    def selected_consts_groups_to_relax(self, value):
+        self._selected_consts_groups_to_relax = value
 
     def print_model_statistics(self):
         model = self._model
@@ -100,6 +109,20 @@ class RepairResult:
                 if var.X != 0:
                     print(var.VarName, " : ", var.X)
 
+    def get_selected_consts_location_groups_to_relax(self):
+        if self._isRepaired:
+            model = self._model
+            selected_groups = []
+            for var in model.getVars():
+                if "Art" in var.VarName:
+                    if var.X != 0:
+                        group = get_constraint_location_group(var.VarName)
+                        if group not in selected_groups:
+                            selected_groups.append(group)
+            return selected_groups
+        else:
+            return None
+
     def print_result_summary(self):
         cost = self.repair_cost
         print("\n\t\t*** Repair Result Summary ***")
@@ -112,10 +135,34 @@ class RepairResult:
         self.print_model_info()
         print(f"\nAlgorithm is {self.algorithm}\n")
         print(f"Recommended Constrs to relax: {self.recommended_consts_groups_to_relax}")
+        print(f"Selected Constrs to relax: {self.selected_consts_groups_to_relax}")
         if self._isRepaired:
             self.print_elastic_variables()
             self.print_result_summary()
+
         else:
             print("\nCould not repair the infeasibility!\n")
             self.print_result_summary()
 
+
+def get_constraint_location_group(ConstrName):
+    # Define how network is divided into locations. Follow Diagram in 12-10-2022 Group Meeting Presentation
+    Location_Group = ""
+    L1_matches = ["w3", "s3", "s4"]
+    L2_matches = ["w2", "s8"]
+    L3_matches = ["s1", "s2", "s5", "s6", "s7", "w1"]
+    L4_matches = ["w6"]
+    L5_matches = ["s9", "s10", "s11", "w7", "w8", "w4", "w5"]
+
+    if any(x in ConstrName for x in L1_matches):
+        Location_Group = "L1"
+    elif any(x in ConstrName for x in L2_matches):
+        Location_Group = "L2"
+    elif any(x in ConstrName for x in L3_matches):
+        Location_Group = "L3"
+    elif any(x in ConstrName for x in L4_matches):
+        Location_Group = "L4"
+    elif any(x in ConstrName for x in L5_matches):
+        Location_Group = "L5"
+
+    return Location_Group

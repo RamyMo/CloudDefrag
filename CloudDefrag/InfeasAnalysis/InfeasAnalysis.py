@@ -6,7 +6,6 @@ import gurobipy as gp
 from gurobipy import GRB
 from gurobipy.gurobipy import Model
 import numpy as np
-import scipy.sparse as sp
 import time
 import re
 from CloudDefrag.InfeasAnalysis.iis import IISGraph, IISCompute
@@ -363,7 +362,7 @@ def get_constraint_location_group(ConstrName):
 
 
 def get_resource_upgrade_limit(c):
-    compute_resource_factor = 30
+    compute_resource_factor = 10
     bw_factor = 40
     e2e_delay_factor = 5
     propg_delay_factor = 10
