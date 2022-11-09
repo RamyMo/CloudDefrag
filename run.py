@@ -23,12 +23,21 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 
 def main():
     # Input Parameters
-    enable_infeas_repair = True
     make_random_new_requests = False
     algorithm_name = "RamyILP"
+    network_topology = "Reduced"  # "Reduced" or "Regional"
+    # Feasibility Restoration Parameters
+    enable_infeas_repair = True
+    grouping_method = "Resource_Location"  # "Resource_Location" or "Resource_Location"
+
+    compute_resource_factor = 500
+    bw_factor = 40
+    e2e_delay_factor = 5
+    propg_delay_factor = 10
+
 
     # Create the network
-    net, input_parser = create_network("Net1")
+    net, input_parser = create_network("Net1", network_topology)
 
     # Draw the network topology
     net_visual = NetworkVisualizer(net)
@@ -46,7 +55,7 @@ def main():
     algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
 
     # Solve the formulated problem
-    algo.solve(display_result=True)
+    algo.solve(display_result=True, print_decision_variables=False)
 
     # Check Feasibility
     if algo.isFeasible:
@@ -54,39 +63,25 @@ def main():
         out_parser = OutputParser(net, hosted_requests, new_requests)
         out_parser.parse_request_assignments()
     elif enable_infeas_repair:
-        # Repair Infeas
-        inf_analyzer = InfeasAnalyzer(algo.model)
-        grouping_method = "Resource_Location"  # "Resource_Location" or "Constraint_Type"
-        recommended_constraints = "[L1, L2, L3, L4, L5]"
-        #TODO: get recommended_constraints from the agent
-        inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
-                                   recommeded_consts_groups_to_relax=recommended_constraints)
-
-        repair_result = inf_analyzer.result
-        repair_result.print_result()
-
-        # Apply repair and resolve
-        if repair_result.is_repaired:
-            inf_analyzer.apply_infeas_repair(net, hosted_requests, new_requests)
-            new_algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
-            new_algo.solve(display_result=True)
-            # Todo: when number of requests of type 2 exceeds 9:repair_result.is_repaired is true but new_algo.isFeasible is false
-            if new_algo.isFeasible:
-                algo.apply_result()
-                out_parser = OutputParser(net, hosted_requests, new_requests)
-                out_parser.parse_request_assignments()
+        feasibility_restoration(algorithm_instance=algo, grouping_method=grouping_method, algorithm_name=algorithm_name,
+                                net=net, hosted_requests=hosted_requests, new_requests=new_requests,
+                                compute_resource_factor=compute_resource_factor,bw_factor=bw_factor,
+                                e2e_delay_factor=e2e_delay_factor,propg_delay_factor=propg_delay_factor)
     else:
         print("Model is Infeasible")
     net_visual.interactive_visual()
+
     print("Done")
 
 
-def create_network(network_name):
+def create_network(network_name, network_topology):
     net = PhysicalNetwork(name=network_name)
-    # network_nodes_file = "input/RegionalTopo/01-NetworkNodes.csv"
-    # network_connections_file = "input/RegionalTopo/02-NetworkConnections.csv"
-    network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
-    network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"
+    if network_topology == "Reduced":
+        network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
+        network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"
+    elif network_topology == "Regional":
+        network_nodes_file = "input/RegionalTopo/01-NetworkNodes.csv"
+        network_connections_file = "input/RegionalTopo/02-NetworkConnections.csv"
     input_parser = InputParser(net, network_nodes_file=network_nodes_file,
                                network_connections_file=network_connections_file)
     return net, input_parser
@@ -114,12 +109,42 @@ def get_algorithm(net, new_requests, hosted_requests, algorithm_name):
     """
     algo = None
     if algorithm_name == "RamyILP":
-        algo = RamyILP(net, new_requests=new_requests, hosted_requests=hosted_requests)
+        algo = RamyILP(net, new_requests=new_requests, hosted_requests=hosted_requests, model_name="DemoModel")
     elif algorithm_name == "ArisILP":
         algo = ArisILP(net, new_requests=new_requests, hosted_requests=hosted_requests)
     elif algorithm_name == "BinpackHeur":
         algo = BinpackHeur(net, new_requests=new_requests, hosted_requests=hosted_requests)
     return algo
+
+
+def feasibility_restoration(algorithm_instance, grouping_method, algorithm_name, net, hosted_requests, new_requests,
+                            compute_resource_factor, bw_factor, e2e_delay_factor, propg_delay_factor):
+    # Repair Infeas
+    algo = algorithm_instance
+    inf_analyzer = InfeasAnalyzer(algo.model, compute_resource_factor=compute_resource_factor,
+                                  bw_factor=bw_factor, e2e_delay_factor=e2e_delay_factor,
+                                  propg_delay_factor=propg_delay_factor)
+    recommended_constraints = None
+    if grouping_method == "Resource_Location":
+        recommended_constraints = "[L1, L2, L3, L4, L5]"
+    elif grouping_method == "Constraint_Type":
+        recommended_constraints = "[C1, C2, C3, C4]"
+    # TODO: get recommended_constraints from the agent
+    inf_analyzer.repair_infeas(all_constrs_are_modif=False, constraints_grouping_method=grouping_method,
+                               recommeded_consts_groups_to_relax=recommended_constraints)
+    repair_result = inf_analyzer.result
+    repair_result.print_result()
+
+    # Apply repair and resolve
+    if repair_result.is_repaired:
+        inf_analyzer.apply_infeas_repair(net, hosted_requests, new_requests)
+        new_algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
+        new_algo.solve(display_result=True, print_decision_variables=False)
+        # Todo: when number of requests of type 2 exceeds 9:repair_result.is_repaired is true but new_algo.isFeasible is false
+        if new_algo.isFeasible:
+            algo.apply_result()
+            out_parser = OutputParser(net, hosted_requests, new_requests)
+            out_parser.parse_request_assignments()
 
 
 if __name__ == '__main__':

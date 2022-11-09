@@ -1,0 +1,5 @@
+This file is not tracked and contains notes for myself
+- Repository follows the structure in https://github.com/navdeep-G/samplemod and https://docs.python-guide.org/writing/structure/
+Packages Structure in:
+https://dev.to/codemouse92/dead-simple-python-project-structure-and-imports-38c6#:~:text=Organize%20your%20modules%20into%20packages,root%20of%20your%20project's%20repository.
+

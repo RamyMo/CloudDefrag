@@ -1,15 +1,15 @@
 Name,Label,Type,CPU core,RAM GB,Storage GB,isGateway?,Weight
-nc1,server,Server,0,0,0,0,0
-nc2,server,Server,0,0,0,0,0
-ne1,server,Server,0,0,0,0,0
-ne2,server,Server,0,0,0,0,0
-ne3,server,Server,0,0,0,0,0
-ne4,server,Server,0,0,0,0,0
-ne5,server,Server,0,0,0,0,0
-ne6,server,Server,10,10,1000,0,0
-ne7,server,Server,0,0,0,0,0
-ne8,server,Server,0,0,0,0,0
-ne9,server,Server,0,0,0,0,0
+nc1,server,Server,1,1,100,0,0
+nc2,server,Server,1,1,100,0,0
+ne1,server,Server,1,1,100,0,0
+ne2,server,Server,1,1,100,0,0
+ne3,server,Server,1,1,100,0,0
+ne4,server,Server,1,1,100,0,0
+ne5,server,Server,1,1,100,0,0
+ne6,server,Server,1,1,100,0,0
+ne7,server,Server,1,1,100,0,0
+ne8,server,Server,1,1,100,0,0
+ne9,server,Server,1,1,100,0,0
 w6,router,Router,0,0,0,0,0
 w7,router,Router,0,0,0,0,0
 w8,router,Router,0,0,0,0,0

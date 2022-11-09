@@ -53,7 +53,7 @@ class Heuristic(ABC):
         self._model.write(f'output/{self._model_name}_before_heru.lp')
 
     def __compute_gateway_sorted_servers_lengths_dict(self):
-        gateway_routers = self.network.gateway_routers()
+        gateway_routers = self.network.get_gateway_routers()
         for g in gateway_routers:
             sorted_lengths = self.get_sorted_servers_lengths_dict_for_node(g)
             self._gateway_sorted_servers_lengths_dict[g] = sorted_lengths

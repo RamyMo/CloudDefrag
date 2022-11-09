@@ -116,7 +116,7 @@ class PhysicalNetwork(Network):
                 routers.append(node)
         return routers
 
-    def gateway_routers(self) -> List[Router]:
+    def get_gateway_routers(self) -> List[Router]:
         routers = []
         for node in list(self.nodes):
             if isinstance(node, Router):

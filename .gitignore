@@ -6,16 +6,16 @@
 idea
 
 # Notes File
-notes.txt
+#notes.txt
 
 # Output Folder
 #output/
  
 # Log file
-output/log.log
+#output/log.log
 
 # Gurobi env file
-gurobi.env
+#gurobi.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -166,7 +166,7 @@ def filteringShuffleCover(model):
 
 
 def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
-                recommended_consts_groups_to_relax) -> RepairResult:
+                recommended_consts_groups_to_relax, infeas_analyzer_instance) -> RepairResult:
     # https://www.gurobi.com/documentation/9.5/refman/py_model_feasrelax.html#pythonmethod:Model.feasRelax
     # print("\nAlgorithm is Elastic Heuristic\n ")
     isRepaired = False
@@ -231,7 +231,7 @@ def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
                 elif "C2" in c.ConstrName:
                     violConstrs.append(c)
                     rhspen.append(1 / 10)
-                #Todo: Fix: Resource_Location doesn't take into account relaxing C3 or C4
+                # Todo: Fix: Resource_Location doesn't take into account relaxing C3 or C4
 
                 # elif "C3" in c.ConstrName:
                 #     violConstrs.append(c)
@@ -251,7 +251,11 @@ def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
 
     # Set Artificial variables limits by adding constrs
     for c in violConstrs:
-        limit = get_resource_upgrade_limit(c)
+        limit = get_resource_upgrade_limit(c,
+                                           compute_resource_factor=infeas_analyzer_instance.compute_resource_factor,
+                                           bw_factor=infeas_analyzer_instance.bw_factor,
+                                           e2e_delay_factor=infeas_analyzer_instance.e2e_delay_factor,
+                                           propg_delay_factor=infeas_analyzer_instance.propg_delay_factor)
         var = model.getVarByName(f"ArtN_{c.ConstrName}")
         model.addConstr(var <= limit, name=f"ArtN_{c.ConstrName}_limit")
 
@@ -296,7 +300,7 @@ def elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
     exec_time = time.time() - start_time
     # print("Repair Execution Time: %s seconds" % exec_time)
     result = RepairResult(model, cost, exec_time, "Elastic Heuristic", recommended_consts_groups_to_relax, isRepaired,
-                          violConstrs)
+                          violConstrs, constraints_grouping_method)
     return result
 
 
@@ -361,18 +365,14 @@ def get_constraint_location_group(ConstrName):
     return Location_Group
 
 
-def get_resource_upgrade_limit(c):
-    compute_resource_factor = 10
-    bw_factor = 40
-    e2e_delay_factor = 5
-    propg_delay_factor = 10
+def get_resource_upgrade_limit(c, compute_resource_factor, bw_factor, e2e_delay_factor, propg_delay_factor):
     limit = None
     if "C1" in c.ConstrName and "cpu" in c.ConstrName:
         limit = 1 * compute_resource_factor
     elif "C1" in c.ConstrName and "memory" in c.ConstrName:
         limit = 1 * compute_resource_factor
     elif "C1" in c.ConstrName and "storage" in c.ConstrName:
-        limit = 1000 * compute_resource_factor
+        limit = 100 * compute_resource_factor
     elif "C2" in c.ConstrName:
         limit = 100 * bw_factor
     elif "C3" in c.ConstrName:
@@ -390,6 +390,11 @@ class InfeasAnalyzer:
         self._algorithm = kwargs["algorithm"] if "algorithm" in kwargs else "ElasticHeur"
         self._model = model
         self._RepairResult = None
+        self._compute_resource_factor = kwargs[
+            "compute_resource_factor"] if "compute_resource_factor" in kwargs else 100
+        self._bw_factor = kwargs["bw_factor"] if "bw_factor" in kwargs else 40
+        self._e2e_delay_factor = kwargs["e2e_delay_factor"] if "e2e_delay_factor" in kwargs else 5
+        self._propg_delay_factor = kwargs["propg_delay_factor"] if "propg_delay_factor" in kwargs else 10
         # get_model_statistics(model)
 
     @property
@@ -404,6 +409,37 @@ class InfeasAnalyzer:
     def result(self):
         return self._RepairResult
 
+    @property
+    def compute_resource_factor(self):
+        return self._compute_resource_factor
+
+    @compute_resource_factor.setter
+    def compute_resource_factor(self, value):
+        self._compute_resource_factor = value
+
+    @property
+    def bw_factor(self):
+        return self._bw_factor
+
+    @bw_factor.setter
+    def bw_factor(self, value):
+        self._bw_factor = value
+
+    @property
+    def e2e_delay_factor(self):
+        return self._e2e_delay_factor
+
+    @e2e_delay_factor.setter
+    def e2e_delay_factor(self, value):
+        self._e2e_delay_factor = value
+
+    @property
+    def propg_delay_factor(self):
+        return self._propg_delay_factor
+
+    @propg_delay_factor.setter
+    def propg_delay_factor(self, value):
+        self._propg_delay_factor = value
     def repair_infeas(self, **kwargs):
         constraints_grouping_method = kwargs[
             "constraints_grouping_method"] if "constraints_grouping_method" in kwargs else "Constraint_Type"
@@ -427,7 +463,8 @@ class InfeasAnalyzer:
             filteringShuffleCover(model)
         elif self.algorithm == "ElasticHeur":
             self._RepairResult = elasticHeur(model, all_constrs_are_modif, constraints_grouping_method,
-                                             recommended_consts_groups_to_relax)
+                                             recommended_consts_groups_to_relax,
+                                             infeas_analyzer_instance=self)
 
     def apply_infeas_repair(self, net: PhysicalNetwork, hosted_requests: List[HostedVMRequest],
                             new_requests: List[NewVMRequest]):

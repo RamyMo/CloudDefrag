@@ -7,7 +7,7 @@ import numpy as np
 class RepairResult:
 
     def __init__(self, model, repair_cost, repair_exec_time, algorithm, recommended_consts_groups_to_relax, isRepaired,
-                 violConstrs)-> None:
+                 violConstrs, constraints_grouping_method)-> None:
         self._violConstrs = violConstrs
         self._isRepaired = isRepaired
         self._model = model
@@ -15,6 +15,7 @@ class RepairResult:
         self._repair_exec_time = repair_exec_time
         self._algorithm = algorithm
         self._recommended_consts_groups_to_relax =recommended_consts_groups_to_relax
+        self._constraints_grouping_method = constraints_grouping_method
         self._selected_consts_groups_to_relax = self.get_selected_consts_location_groups_to_relax()
 
     @property
@@ -55,6 +56,14 @@ class RepairResult:
     @selected_consts_groups_to_relax.setter
     def selected_consts_groups_to_relax(self, value):
         self._selected_consts_groups_to_relax = value
+
+    @property
+    def constraints_grouping_method(self):
+        return self._constraints_grouping_method
+
+    @constraints_grouping_method.setter
+    def constraints_grouping_method(self, value):
+        self._constraints_grouping_method = value
 
     def print_model_statistics(self):
         model = self._model
@@ -110,34 +119,58 @@ class RepairResult:
                     print(var.VarName, " : ", var.X)
 
     def get_selected_consts_location_groups_to_relax(self):
-        if self._isRepaired:
-            model = self._model
-            selected_groups = []
-            for var in model.getVars():
-                if "Art" in var.VarName:
-                    if var.X != 0:
-                        group = get_constraint_location_group(var.VarName)
-                        if group not in selected_groups:
-                            selected_groups.append(group)
-            return selected_groups
-        else:
-            return None
+        constraints_grouping_method = self._constraints_grouping_method
+        if constraints_grouping_method == "Resource_Location":
+            if self._isRepaired:
+                model = self._model
+                selected_groups = []
+                for var in model.getVars():
+                    if "Art" in var.VarName:
+                        if var.X != 0:
+                            group = get_constraint_location_group(var.VarName)
+                            if group not in selected_groups:
+                                selected_groups.append(group)
+                return selected_groups
+            else:
+                return None
+        elif constraints_grouping_method == "Constraint_Type":
+            if self._isRepaired:
+                model = self._model
+                selected_groups = []
+                for var in model.getVars():
+                    if "Art" in var.VarName:
+                        if var.X != 0:
+                            if "C1" in var.VarName and "C1" not in selected_groups:
+                                selected_groups.append("C1")
+                            elif "C2" in var.VarName and "C2" not in selected_groups:
+                                selected_groups.append("C2")
+                            elif "C3" in var.VarName and "C3" not in selected_groups:
+                                selected_groups.append("C3")
+                            elif "C4" in var.VarName and "C4" not in selected_groups:
+                                selected_groups.append("C4")
+                return selected_groups
+            else:
+                return None
 
     def print_result_summary(self):
         cost = self.repair_cost
-        print("\n\t\t*** Repair Result Summary ***")
+        print("\t\t*** Repair Result Summary ***")
         print(f"Number of Vilable Constraints: {self.number_of_violable_constrs}")
         print("Cost:", cost, "Number of servers:", "Num of Changes:")
         exec_time = self.repair_exec_time
         print("Repair Execution Time: %s seconds" % exec_time)
 
-    def print_result(self):
-        self.print_model_info()
-        print(f"\nAlgorithm is {self.algorithm}\n")
+    def print_result(self, **kwargs):
+        show_elastic_variables = kwargs["show_elastic_variables"] if "show_elastic_variables" in kwargs else False
+        show_model_info = kwargs["show_model_info"] if "show_model_info" in kwargs else False
+        if show_model_info:
+            self.print_model_info()
+        print(f"Fixing Infeasibility using {self.algorithm}...")
         print(f"Recommended Constrs to relax: {self.recommended_consts_groups_to_relax}")
         print(f"Selected Constrs to relax: {self.selected_consts_groups_to_relax}")
         if self._isRepaired:
-            self.print_elastic_variables()
+            if show_elastic_variables:
+                self.print_elastic_variables()
             self.print_result_summary()
 
         else:

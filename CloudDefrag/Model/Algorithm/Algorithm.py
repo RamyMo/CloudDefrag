@@ -10,6 +10,7 @@ from CloudDefrag.Model.Graph.Node import DummyVirtualMachine, Server
 
 class Algorithm(ABC):
     """Algorithm abstract class is used for any algorithm that is solved via solver like Guroubi"""
+
     def __init__(self, net: PhysicalNetwork, new_requests: List[NewVMRequest], hosted_requests: List[HostedVMRequest],
                  **kwargs) \
             -> None:
@@ -113,41 +114,45 @@ class Algorithm(ABC):
     def _create_dummy_vm_constrs(self):
         pass
 
-
-
-
     # Run optimization engine
     def solve(self, **kwargs):
         # Solves return non-integral values for integer variables
         # https://www.gurobi.com/documentation/9.5/refman/integralityfocus.html
         # https://support.gurobi.com/hc/en-us/articles/360012237872-Why-does-Gurobi-sometimes-return-non-integral-values-for-integer-variables-
-        self._model.setParam("IntegralityFocus", 1);
+        self._model.setParam("IntegralityFocus", 1)
 
         self._model.optimize()
         Logger.log.info(f"Solving problem model {self._model_name} using RamyILP...")
         if self.isFeasible:
             Logger.log.info(f"Model {self._model_name} is feasible")
             if kwargs["display_result"]:
-                self.display_result()
+                if kwargs["print_decision_variables"]:
+                    print_decision_variables = True
+                else:
+                    print_decision_variables = False
+                self.display_result(print_decision_variables=print_decision_variables)
         else:
             Logger.log.info(f"Model {self._model_name} is infeasible")
             print(f"Model {self._model_name} is infeasible")
+
     # Display Results
-    def display_result(self):
+    def display_result(self, **kwargs):
         print("\n*******************************************************")
         print(f"Showing results for model: {self._model_name}")
         # Model properties:
         print(f"Number of Decision Variables: {len(self._model.getVars())}")
         print(f"Number of Constraints: {len(self._model.getConstrs())}")
         # Display optimal values of decision variables
-        print("Decision Variables:")
-        for v in self._model.getVars():
-            if v.x > 1e-6:
-                print(f"{v.varName} = {v.x}")
+        if kwargs["print_decision_variables"]:
+            print("Decision Variables:")
+            for v in self._model.getVars():
+                if v.x > 1e-6:
+                    print(f"{v.varName} = {v.x}")
         # Display optimal total matching score
         print('Total cost: ', self._model.objVal)
         print(f"Runtime: {self._model.getAttr(gp.GRB.Attr.Runtime)} seconds")
         print("*******************************************************\n")
+
     # Apply results
     def apply_result(self):
         net_node_dict = self._network.get_node_dict()
@@ -228,7 +233,6 @@ class Algorithm(ABC):
                 pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
                 if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
                     vl.add_hosting_physical_link(pl)
-
 
 
 class AlgorithmResult():
