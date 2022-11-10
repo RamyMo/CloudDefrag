@@ -2,10 +2,13 @@
 # The main code of the Simulator
 import networkx
 
+from CloudDefrag.Model.Algorithm.Algorithm import Algorithm
 from CloudDefrag.Model.Algorithm.ArisILP import ArisILP
 from CloudDefrag.Model.Algorithm.BinpackHeur import BinpackHeur
+from CloudDefrag.Model.Algorithm.Heuristic import Heuristic
 from CloudDefrag.Model.Algorithm.RamyILP import RamyILP
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
+from CloudDefrag.Model.Algorithm.SpreadHeur import SpreadHeur
 from CloudDefrag.Model.Graph.Link import VirtualLink, LinkSpecs, PhysicalLink
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork, VirtualNetwork
 from CloudDefrag.Model.Graph.Node import Server, VirtualMachine, Router, DummyVirtualMachine
@@ -24,7 +27,7 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 def main():
     # Input Parameters
     make_random_new_requests = False
-    algorithm_name = "RamyILP"
+    algorithm_name = "SpreadHeur" # RamyILP, BinpackHeur, SpreadHeur, ArisILP
     network_topology = "Reduced"  # "Reduced" or "Regional"
     # Feasibility Restoration Parameters
     enable_infeas_repair = True
@@ -55,20 +58,29 @@ def main():
     algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
 
     # Solve the formulated problem
-    algo.solve(display_result=True, print_decision_variables=False)
+    algo.solve(display_result=True, print_decision_variables=True)
 
-    # Check Feasibility
-    if algo.isFeasible:
-        algo.apply_result()
-        out_parser = OutputParser(net, hosted_requests, new_requests)
-        out_parser.parse_request_assignments()
-    elif enable_infeas_repair:
-        feasibility_restoration(algorithm_instance=algo, grouping_method=grouping_method, algorithm_name=algorithm_name,
-                                net=net, hosted_requests=hosted_requests, new_requests=new_requests,
-                                compute_resource_factor=compute_resource_factor,bw_factor=bw_factor,
-                                e2e_delay_factor=e2e_delay_factor,propg_delay_factor=propg_delay_factor)
-    else:
-        print("Model is Infeasible")
+    if isinstance(algo, Heuristic):
+        heuristic_result = algo.heuristic_result
+        if heuristic_result.is_success:
+            algo.display_result()
+            out_parser = OutputParser(net, hosted_requests, new_requests)
+            out_parser.parse_request_assignments()
+
+    elif isinstance(algo, Algorithm):
+        # Check Feasibility
+        if algo.isFeasible:
+            algo.apply_result()
+            out_parser = OutputParser(net, hosted_requests, new_requests)
+            out_parser.parse_request_assignments()
+        elif enable_infeas_repair:
+            feasibility_restoration(algorithm_instance=algo, grouping_method=grouping_method, algorithm_name=algorithm_name,
+                                    net=net, hosted_requests=hosted_requests, new_requests=new_requests,
+                                    compute_resource_factor=compute_resource_factor,bw_factor=bw_factor,
+                                    e2e_delay_factor=e2e_delay_factor,propg_delay_factor=propg_delay_factor)
+        else:
+            print("Model is Infeasible")
+
     net_visual.interactive_visual()
 
     print("Done")
@@ -114,6 +126,8 @@ def get_algorithm(net, new_requests, hosted_requests, algorithm_name):
         algo = ArisILP(net, new_requests=new_requests, hosted_requests=hosted_requests)
     elif algorithm_name == "BinpackHeur":
         algo = BinpackHeur(net, new_requests=new_requests, hosted_requests=hosted_requests)
+    elif algorithm_name == "SpreadHeur":
+        algo = SpreadHeur(net, new_requests=new_requests, hosted_requests=hosted_requests)
     return algo
 
 

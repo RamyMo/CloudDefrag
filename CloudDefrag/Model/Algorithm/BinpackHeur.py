@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import List
 import itertools
 import gurobipy as gp
+import time
 
 from CloudDefrag.Model.Algorithm.Algorithm import Algorithm
 from CloudDefrag.Model.Algorithm.Heuristic import Heuristic
@@ -162,24 +163,31 @@ class BinpackHeur(Heuristic):
             if failed_request_assign:
                 self.heuristic_result.requests_vnf_assignments_dict[new_req] = None
                 self.heuristic_result.requests_vlinks_assignments_dict[new_req] = None
-            else:
+            else:   # Successful Allocation
                 self.heuristic_result.requests_vnf_assignments_dict[new_req] = req_vnf_assignments
                 self.heuristic_result.requests_vlinks_assignments_dict[new_req] = req_vlink_assignments
+                self.heuristic_result.is_success = True
 
         self.heuristic_result.heuristic_model = self.model
         self.heuristic_result.heuristic_name = self.name
 
+
     def solve(self, **kwargs):
-        Logger.log.info(f"Solving problem model {self._model_name} using Binpack Heuristic...")
+        Logger.log.info(f"Solving problem model {self._model_name} using {self.name} Heuristic...")
+        start_time = time.time()
         self.__solve_binpack_heur()
+        execution_time = time.time() - start_time
+        self.heuristic_result.execution_time = execution_time
         # Save model for inspection
         self._model.write(f'output/{self._model_name}_after_heru.lp')
-        self._model.optimize()
 
-        if self.isFeasible:
-            Logger.log.info(f"Model {self._model_name} is feasible")
-            if kwargs["display_result"]:
-                self.display_result()
-        else:
-            Logger.log.info(f"Model {self._model_name} is infeasible")
-            # print(f"Model {self._model_name} is infeasible")
+        #TODO: fix why self._model.optimize() results in infeasible model for heuristic
+        # self._model.optimize()
+        #
+        # if self.isFeasible:
+        #     Logger.log.info(f"Model {self._model_name} is feasible")
+        #     if kwargs["display_result"]:
+        #         self.display_result()
+        # else:
+        #     Logger.log.info(f"Model {self._model_name} is infeasible")
+        #     # print(f"Model {self._model_name} is infeasible")

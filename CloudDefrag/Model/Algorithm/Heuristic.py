@@ -84,7 +84,7 @@ class Heuristic(ABC):
         for i in range(number_of_edges):
             source_node = path[i]
             target_node = path[i+1]
-            edge = self.network[source][target]["object"]
+            edge = self.network[source_node][target_node]["object"]
             edges.append(edge)
         return edges
     @property
@@ -341,18 +341,23 @@ class Heuristic(ABC):
     # Display Results
     def display_result(self):
         print("\n*******************************************************")
-        print(f"Showing results for model: {self._model_name}")
-        # Model properties:
-        print(f"Number of Decision Variables: {len(self._model.getVars())}")
-        print(f"Number of Constraints: {len(self._model.getConstrs())}")
-        # Display optimal values of decision variables
-        print("Decision Variables:")
-        for v in self._model.getVars():
-            if v.x > 1e-6:
-                print(f"{v.varName} = {v.x}")
-        # Display optimal total matching score
-        print('Total cost: ', self._model.objVal)
-        print(f"Runtime: {self._model.getAttr(gp.GRB.Attr.Runtime)} seconds")
+        print(f"Showing results for model: {self._model_name} solved by heuristic {self.name}")
+        print("\nVNF Allocations: ")
+        for req, vnf_allocs in self.heuristic_result.requests_vnf_assignments_dict.items():
+            print(f"Request No. {req.request_id} of type {req.request_type}:")
+            for vnf, host in vnf_allocs.items():
+                print(f"VNF {vnf.node_name} is hosted at {host.node_name}")
+        print("\nvLinks Allocations: ")
+        for req, vlink_allocs in self.heuristic_result.requests_vlinks_assignments_dict.items():
+            print(f"Request No. {req.request_id} of type {req.request_type}:")
+            for vlink, plinks in vlink_allocs.items():
+                if plinks:
+                    pl_names = ""
+                    for pl in plinks:
+                        pl_names += pl.name + " "
+                    print(f"vLink {vlink.name} is hosted at: {pl_names}")
+        print(f'\nTotal cost: {self.heuristic_result.cost}')
+        print(f"Runtime: {self.heuristic_result.execution_time} seconds")
         print("*******************************************************\n")
 
     # Apply results
@@ -443,7 +448,9 @@ class HeuristicResult():
         self._requests_vnf_assignments_dict = {}  # Maps requests to their vnf assignments dict
         self._requests_vlinks_assignments_dict = {} # Maps requests to their vlinks assignments dict
         self._heuristic_name = None  # Heuristic used to solve the problem
-
+        self._execution_time = None
+        self._is_success = None # Successful allocation
+        self._cost = None
     @property
     def heuristic_model(self):
         return self._heuristic_model
@@ -459,6 +466,7 @@ class HeuristicResult():
     @property
     def requests_vlinks_assignments_dict(self):
         return self._requests_vlinks_assignments_dict
+
     @property
     def heuristic_name(self):
         return self._heuristic_name
@@ -467,6 +475,40 @@ class HeuristicResult():
     def heuristic_name(self, value):
         self._heuristic_name = value
 
+    @property
+    def is_success(self):
+        return self._is_success
+
+    @is_success .setter
+    def is_success(self, value):
+        self._is_success = value
+
+    @property
+    def execution_time(self):
+        return self._execution_time
+
+    @execution_time.setter
+    def execution_time(self, value):
+        self._execution_time = value
+
+    @property
+    def cost(self):
+        cost = 0
+        revenue = 0
+        for req, vnf_allocs in self.requests_vnf_assignments_dict.items():
+            for vnf, host in vnf_allocs.items():
+                revenue += vnf.vm_revenue_coeff
+        for req, vlink_allocs in self.requests_vlinks_assignments_dict.items():
+            for vlink, plinks in vlink_allocs.items():
+                if plinks:
+                    for pl in plinks:
+                        cost += pl.link_cost_coefficient
+        self._cost = revenue - cost
+        return self._cost
+
+    @cost.setter
+    def cost(self, value):
+        self._cost = value
 
 def sort_dictionary_by_value(dict):
     sorted_tuples = sorted(dict.items(), key=lambda item: item[1])

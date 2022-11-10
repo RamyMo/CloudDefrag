@@ -253,9 +253,9 @@ class InputParser:
         gateway_routers = net.get_gateway_routers()
         for gateway_router in gateway_routers:
             gateway_name = gateway_router.node_name
-            num_of_type1 = randint(0, 10)
-            num_of_type2 = randint(0, 10)
-            num_of_type3 = randint(0, 10)
+            num_of_type1 = randint(0, 5)
+            num_of_type2 = randint(0, 5)
+            num_of_type3 = randint(0, 5)
             if print_dist:
                 print(f"Req. Dist at {gateway_name}: ({num_of_type1}, {num_of_type2}, {num_of_type3})")
             for i in range(num_of_type1):
@@ -265,7 +265,7 @@ class InputParser:
             for i in range(num_of_type3):
                 new_requests.append(self.create_new_request(3, gateway_router))
 
-            req_dist [gateway_name] = [num_of_type1, num_of_type2, num_of_type3]
+            req_dist[gateway_name] = [num_of_type1, num_of_type2, num_of_type3]
         return new_requests, req_dist
     def get_random_new_requests_from_gateway_type1(self, gateway_name, **kwargs):
         seed_number = kwargs["seed_number"] if "seed_number" in kwargs else None

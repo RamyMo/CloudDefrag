@@ -126,6 +126,7 @@ class Algorithm(ABC):
         if self.isFeasible:
             Logger.log.info(f"Model {self._model_name} is feasible")
             if kwargs["display_result"]:
+                # TODO: fix print_decision_variables
                 if kwargs["print_decision_variables"]:
                     print_decision_variables = True
                 else:

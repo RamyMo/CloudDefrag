@@ -12,6 +12,13 @@ import sys
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
+# Hyper-parameters
+input_size = 12
+hidden_size = 100
+num_classes = 32
+num_epochs = 200
+batch_size = 10
+learning_rate = 0.001
 
 
 ############## DATASET ########################
@@ -31,7 +38,7 @@ class FeasRestDataset(Dataset):
 
 
         # read with numpy or pandas
-        xy = np.loadtxt(file_name_train, delimiter=',', dtype=np.float32, skiprows=1)
+        xy = np.loadtxt(file_name, delimiter=',', dtype=np.float32, skiprows=1)
         self.n_samples = xy.shape[0]
 
         # here the first column is the class label, the rest are the features
@@ -55,13 +62,7 @@ writer = SummaryWriter('runs/FeasRest1')
 # Device configuration
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Hyper-parameters 
-input_size = 1
-hidden_size = 100
-num_classes = 32
-num_epochs = 100
-batch_size = 10
-learning_rate = 0.001
+
 
 
 # create dataset
@@ -134,14 +135,24 @@ for epoch in range(num_epochs):
 
         _, predicted = torch.max(outputs.data, 1)
         running_correct += (predicted == labels).sum().item()
-        if (i+1) % batch_size == 0:
+
+        if (i+1) % n_total_steps == 0 and (epoch+1) % 10 == 0:
             print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
             ############## TENSORBOARD ########################
-            writer.add_scalar('Training Loss', running_loss / batch_size, epoch * n_total_steps + i)
-            running_accuracy = 100 * running_correct / batch_size / predicted.size(0)
+            writer.add_scalar('Training Loss', loss.item(), epoch * n_total_steps + i)
+            running_accuracy = 100 * running_correct / (10 * train_dataset.n_samples)
             writer.add_scalar('Prediction Accuracy', running_accuracy, epoch * n_total_steps + i)
             running_correct = 0
             running_loss = 0.0
+
+        # if (i+1) % n_total_steps == 0:
+        #     print (f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{n_total_steps}], Loss: {loss.item():.4f}')
+        #     ############## TENSORBOARD ########################
+        #     writer.add_scalar('Training Loss', running_loss / batch_size, epoch * n_total_steps + i)
+        #     running_accuracy = 100 * running_correct / batch_size / predicted.size(0)
+        #     writer.add_scalar('Prediction Accuracy', running_accuracy, epoch * n_total_steps + i)
+        #     running_correct = 0
+        #     running_loss = 0.0
             ###################################################
 
 # Test the model
