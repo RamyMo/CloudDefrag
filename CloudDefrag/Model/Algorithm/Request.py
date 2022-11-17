@@ -2,8 +2,10 @@ import itertools
 from abc import ABC
 
 from CloudDefrag.Model.Graph.Link import PhysicalLink, VirtualLink
-from CloudDefrag.Model.Graph.Node import VirtualMachine, Node, Router
+from CloudDefrag.Model.Graph.Node import VirtualMachine, Node, Router, DummyVirtualMachine
 from CloudDefrag.Model.Graph.Network import VirtualNetwork, PhysicalNetwork
+from CloudDefrag.Logging.Logger import Logger
+
 import gurobipy as gp
 
 
@@ -304,6 +306,11 @@ class NewVMRequest(VMRequest):
         # New vlinks Assignment variables
         self._new_vl = None
 
+        #Allocation Information
+        self._is_allocated = False
+        self._vnf_allocation = None
+        self._vlinks_allocation = None
+
     def __str__(self) -> str:
         return f"New Request: ID:{self.request_id}, Type:{self.request_type}"
 
@@ -346,6 +353,30 @@ class NewVMRequest(VMRequest):
     @new_vlinks_assign_vars.setter
     def new_vlinks_assign_vars(self, value):
         self._new_vl = value
+
+    @property
+    def is_allocated(self):
+        return self._is_allocated
+
+    @is_allocated.setter
+    def is_allocated(self, value):
+        self._is_allocated = value
+
+    @property
+    def vnf_allocation(self):
+        return self._vnf_allocation
+
+    @vnf_allocation.setter
+    def vnf_allocation(self, value):
+        self._vnf_allocation = value
+
+    @property
+    def vlinks_allocation(self):
+        return self._vlinks_allocation
+
+    @vlinks_allocation.setter
+    def vlinks_allocation(self, value):
+        self._vlinks_allocation = value
 
     def __create_requested_vms_dicts(self):
         requested_vms_servers_combination = list(itertools.product(self._requested_vms,
@@ -479,3 +510,27 @@ class NewVMRequest(VMRequest):
     @requested_vms_servers_revenue_dict.setter
     def requested_vms_servers_revenue_dict(self, value):
         self._requested_vms_servers_revenue_dict = value
+
+    def deallocate(self):
+        Logger.log.info(f"Deallocating Request{self.request_id}...")
+        if not self.is_allocated:
+            Logger.log.info(f"Failed Deallocation! Request{self.request_id} does not have allocation")
+            return
+        else:
+            # Deallocate VNFs
+            for vnf, node in self.vnf_allocation.items():
+                if isinstance(vnf, DummyVirtualMachine):
+                    if isinstance(node, Router):
+                        node.remove_dummy_vm(vnf)
+                    continue
+                else:
+                    node.remove_virtual_machine(vnf)
+            # Deallocate vlinks
+            for vlink, plinks in self.vlinks_allocation.items():
+                if plinks:
+                    for plink in plinks:
+                        vlink.remove_hosting_physical_link(plink)  # Undo applying change to physical link
+            self.gateway_router.deattach_request_from_gateway_router(self, self.request_type)
+            self.is_allocated = False
+            self.vnf_allocation = None
+            self.vlinks_allocation = None

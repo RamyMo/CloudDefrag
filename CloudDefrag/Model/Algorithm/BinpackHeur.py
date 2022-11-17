@@ -104,6 +104,8 @@ class BinpackHeur(Heuristic):
                     self._model.remove(constr)
                 for vnf, server in req_vnf_assignments.items():
                     if isinstance(vnf, DummyVirtualMachine):
+                        if isinstance(server, Router):
+                            server.remove_dummy_vm(vnf)
                         continue
                     else:
                         server.remove_virtual_machine(vnf)
@@ -151,14 +153,20 @@ class BinpackHeur(Heuristic):
                     self._model.remove(constr)
                 for vnf, server in req_vnf_assignments.items():
                     if isinstance(vnf, DummyVirtualMachine):
+                        if isinstance(server, Router):
+                            server.remove_dummy_vm(vnf)
                         continue
+
                     else:
                         server.remove_virtual_machine(vnf)
                 # undo vlink assign
                 for constr in added_vlinks_constrs:
                     self._model.remove(constr)
-                for vlink, plink in req_vlink_assignments.items():
-                    vlink.add_hosting_physical_link(plink)  # Undo applying change to physical link
+                for vlink, plinks in req_vlink_assignments.items():
+                    if plinks:
+                        for plink in plinks:
+                            vlink.remove_hosting_physical_link(plink)  # Undo applying change to physical link
+
 
             if failed_request_assign:
                 self.heuristic_result.requests_vnf_assignments_dict[new_req] = None
@@ -166,6 +174,9 @@ class BinpackHeur(Heuristic):
             else:   # Successful Allocation
                 self.heuristic_result.requests_vnf_assignments_dict[new_req] = req_vnf_assignments
                 self.heuristic_result.requests_vlinks_assignments_dict[new_req] = req_vlink_assignments
+                new_req.vnf_allocation = req_vnf_assignments
+                new_req.vlinks_allocation = req_vlink_assignments
+                new_req.is_allocated = True
                 self.heuristic_result.is_success = True
 
         self.heuristic_result.heuristic_model = self.model

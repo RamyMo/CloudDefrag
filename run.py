@@ -19,71 +19,90 @@ import networkx as nx
 
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
+from CloudDefrag.Simulator.Simulator import Simulator
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisualizer
 
 
 # TODO: Improve Network Visualization
 
 def main():
-    # Input Parameters
-    make_random_new_requests = False
-    algorithm_name = "SpreadHeur" # RamyILP, BinpackHeur, SpreadHeur, ArisILP
-    network_topology = "Reduced"  # "Reduced" or "Regional"
-    # Feasibility Restoration Parameters
-    enable_infeas_repair = True
-    grouping_method = "Resource_Location"  # "Resource_Location" or "Resource_Location"
-
-    compute_resource_factor = 500
-    bw_factor = 40
-    e2e_delay_factor = 5
-    propg_delay_factor = 10
+    my_sim = Simulator(number_of_requests=100)
+    my_sim.algorithm_name = "BinpackHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
+    my_sim.start()
+    my_sim.result.print_simulation_result()
 
 
-    # Create the network
-    net, input_parser = create_network("Net1", network_topology)
+    # # Input Parameters
+    # make_random_new_requests = False
+    # algorithm_name = "RamyILP" # RamyILP, BinpackHeur, SpreadHeur, ArisILP
+    # network_topology = "Reduced"  # "Reduced" or "Regional"
+    #
+    # # Request parameters
+    # single_request_allocation = True
+    #
+    # # Feasibility Restoration Parameters
+    # enable_infeas_repair = False
+    # grouping_method = "Resource_Location"  # "Resource_Location" or "Resource_Location"
+    # compute_resource_factor = 500
+    # bw_factor = 40
+    # e2e_delay_factor = 5
+    # propg_delay_factor = 10
+    #
+    #
+    # # Create the network
+    # net, input_parser = create_network("Net1", network_topology)
+    #
+    # # Draw the network topology
+    # net_visual = NetworkVisualizer(net)
+    # net_visual.plot()
 
-    # Draw the network topology
-    net_visual = NetworkVisualizer(net)
-    net_visual.plot()
 
-    # Create the requests
-    hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
 
-    # Apply the placement of the hosted requests (if any)
-    input_parser.assign_hosted_requests()
-
-    # VNF Placement
-    # TODO: fix differences between objective functions of RamyILP and BinpackHeur
-
-    algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
-
-    # Solve the formulated problem
-    algo.solve(display_result=True, print_decision_variables=True)
-
-    if isinstance(algo, Heuristic):
-        heuristic_result = algo.heuristic_result
-        if heuristic_result.is_success:
-            algo.display_result()
-            out_parser = OutputParser(net, hosted_requests, new_requests)
-            out_parser.parse_request_assignments()
-
-    elif isinstance(algo, Algorithm):
-        # Check Feasibility
-        if algo.isFeasible:
-            algo.apply_result()
-            out_parser = OutputParser(net, hosted_requests, new_requests)
-            out_parser.parse_request_assignments()
-        elif enable_infeas_repair:
-            feasibility_restoration(algorithm_instance=algo, grouping_method=grouping_method, algorithm_name=algorithm_name,
-                                    net=net, hosted_requests=hosted_requests, new_requests=new_requests,
-                                    compute_resource_factor=compute_resource_factor,bw_factor=bw_factor,
-                                    e2e_delay_factor=e2e_delay_factor,propg_delay_factor=propg_delay_factor)
-        else:
-            print("Model is Infeasible")
-
-    net_visual.interactive_visual()
-
-    print("Done")
+    #
+    # for i in range(10):
+    #     # Create the requests
+    #     hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
+    #
+    #     # Apply the placement of the hosted requests (if any)
+    #     input_parser.assign_hosted_requests()
+    #
+    #     # VNF Placement
+    #     # TODO: fix differences between objective functions of RamyILP and BinpackHeur
+    #
+    #     algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
+    #
+    #     # Solve the formulated problem
+    #     algo.solve(display_result=True, print_decision_variables=True)
+    #
+    #     if isinstance(algo, Heuristic):
+    #         heuristic_result = algo.heuristic_result
+    #         if heuristic_result.is_success:
+    #             algo.display_result()
+    #             out_parser = OutputParser(net, hosted_requests, new_requests)
+    #             out_parser.parse_request_assignments()
+    #
+    #     elif isinstance(algo, Algorithm):
+    #         # Check Feasibility
+    #         if algo.isFeasible:
+    #             algo.apply_result()
+    #             out_parser = OutputParser(net, hosted_requests, new_requests)
+    #             out_parser.parse_request_assignments()
+    #         elif enable_infeas_repair:
+    #             feasibility_restoration(algorithm_instance=algo, grouping_method=grouping_method,
+    #                                     algorithm_name=algorithm_name,
+    #                                     net=net, hosted_requests=hosted_requests, new_requests=new_requests,
+    #                                     compute_resource_factor=compute_resource_factor, bw_factor=bw_factor,
+    #                                     e2e_delay_factor=e2e_delay_factor, propg_delay_factor=propg_delay_factor)
+    #         else:
+    #             print("Model is Infeasible")
+    #
+    #     net_visual.interactive_visual()
+    #
+    #     print("Done")
+    #
+    #     new_requests[0].deallocate()
+    #
+    #     net_visual.interactive_visual()
 
 
 def create_network(network_name, network_topology):

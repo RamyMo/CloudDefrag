@@ -289,6 +289,15 @@ class Router(PhysicalNode):
             elif request_type == 3:
                 self._type3_requests.append(request)
 
+    def deattach_request_from_gateway_router(self, request, request_type):
+        if self.is_gateway:
+            if request_type == 1:
+                self._type1_requests.remove(request)
+            elif request_type == 2:
+                self._type2_requests.remove(request)
+            elif request_type == 3:
+                self._type3_requests.remove(request)
+
 class Switch(PhysicalNode):
 
     def __init__(self, **kwargs):

@@ -33,6 +33,10 @@ class Algorithm(ABC):
         self._physical_links_names = [vl.name for vl in self._physical_links]
         self._physical_links_dict = net.get_links_dict()
 
+        # Algorithm Results
+        self._algorithm_result = AlgorithmResult()
+        self.algorithm_result.algorithm_name = self._model_name
+
         Logger.log.info(f"Created an instance of ILP algorithm for model {self._model_name}.")
         self._create_problem_model()
 
@@ -69,6 +73,14 @@ class Algorithm(ABC):
             isFeas = False
 
         return isFeas
+
+    @property
+    def algorithm_result(self):
+        return self._algorithm_result
+
+    @algorithm_result.setter
+    def algorithm_result(self, value):
+        self._algorithm_result = value
 
     @abstractmethod
     def _create_problem_model(self):
@@ -125,6 +137,9 @@ class Algorithm(ABC):
         Logger.log.info(f"Solving problem model {self._model_name} using RamyILP...")
         if self.isFeasible:
             Logger.log.info(f"Model {self._model_name} is feasible")
+            self.algorithm_result.is_success = True
+            self.algorithm_result.cost = self._model.objVal
+            self.algorithm_result.execution_time = self._model.getAttr(gp.GRB.Attr.Runtime)
             if kwargs["display_result"]:
                 # TODO: fix print_decision_variables
                 if kwargs["print_decision_variables"]:
@@ -135,6 +150,7 @@ class Algorithm(ABC):
         else:
             Logger.log.info(f"Model {self._model_name} is infeasible")
             print(f"Model {self._model_name} is infeasible")
+            self.algorithm_result.is_success = False
 
     # Display Results
     def display_result(self, **kwargs):
@@ -209,6 +225,15 @@ class Algorithm(ABC):
 
         Logger.log.info(f"Assign new VMs...")
         for new_req in self._new_requests:
+            new_req.is_allocated = True
+            req_vnf_assignments = {}
+            self.algorithm_result.requests_vnf_assignments_dict[new_req] = req_vnf_assignments
+            new_req.vnf_allocation = req_vnf_assignments
+
+            req_vlink_assignments = {}
+            self.algorithm_result.requests_vlinks_assignments_dict[new_req] = req_vlink_assignments
+            new_req.vlinks_allocation = req_vlink_assignments
+
             requested_vms_combinations = new_req.requested_vms_combinations
             x = new_req.new_vms_assign_vars
             requested_vms_dict = new_req.requested_vms_dict
@@ -217,25 +242,86 @@ class Algorithm(ABC):
             for v, s in requested_vms_combinations:
                 vm = requested_vms_dict[v]
                 server = net_node_dict[s]
-                if isinstance(vm, DummyVirtualMachine):
-                    continue
                 if x[v, s].x == 1:
+                    if isinstance(vm, DummyVirtualMachine):
+                        req_vnf_assignments[vm] = server
+                        continue
                     if isinstance(server, Server):
                         server.add_virtual_machine(vm)
-
+                        req_vnf_assignments[vm] = server
+            self.algorithm_result.requests_vnf_assignments_dict[new_req] = req_vnf_assignments
             # Assign new vLinks
             requested_vlinks_objects_combination = new_req.requested_vlinks_object_combinations
             vL = new_req.new_vlinks_assign_vars
             for i in requested_vlinks_objects_combination:
                 vl = i[0]  # vLink object
                 pl = i[1]  # pLink object
+                if vl not in req_vlink_assignments.keys():
+                    req_vlink_assignments[vl] = []
                 vl_name = i[0].name  # vLink name
                 pl_name = i[1].name  # pLink name as (source,target)
                 pl_reverse_name = i[1].reverse_name  # plink name as (target,source)
                 if vL[vl_name, pl_name].x == 1 or vL[vl_name, pl_reverse_name].x == 1:
                     vl.add_hosting_physical_link(pl)
+                    req_vlink_assignments[vl].append(pl)
 
 
 class AlgorithmResult():
-    pass
-    # TODO: implement AlgorithmResult
+
+    def __init__(self) -> None:
+        self._requests_vnf_assignments_dict = {}  # Maps requests to their vnf assignments dict
+        self._requests_vlinks_assignments_dict = {}  # Maps requests to their vlinks assignments dict
+        self._algorithm_name = None  # Heuristic used to solve the problem
+        self._execution_time = None
+        self._is_success = None  # Successful allocation
+        self._cost = None
+
+    @property
+    def requests_vnf_assignments_dict(self):
+        return self._requests_vnf_assignments_dict
+
+    @requests_vnf_assignments_dict.setter
+    def requests_vnf_assignments_dict(self, value):
+        self._requests_vnf_assignments_dict = value
+
+    @property
+    def requests_vlinks_assignments_dict(self):
+        return self._requests_vlinks_assignments_dict
+
+    @requests_vlinks_assignments_dict.setter
+    def requests_vlinks_assignments_dict(self, value):
+        self._requests_vlinks_assignments_dict = value
+
+    @property
+    def algorithm_name(self):
+        return self._algorithm_name
+
+    @algorithm_name.setter
+    def algorithm_name(self, value):
+        self._algorithm_name = value
+
+    @property
+    def execution_time(self):
+        return self._execution_time
+
+    @execution_time.setter
+    def execution_time(self, value):
+        self._execution_time = value
+
+    @property
+    def is_success(self):
+        return self._is_success
+
+    @is_success.setter
+    def is_success(self, value):
+        self._is_success = value
+
+    @property
+    def cost(self):
+        return self._cost
+
+    @cost.setter
+    def cost(self, value):
+        self._cost = value
+
+# TODO: implement AlgorithmResult

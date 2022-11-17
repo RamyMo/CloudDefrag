@@ -1,4 +1,5 @@
 import csv
+import random
 from typing import List
 
 from CloudDefrag.Model.Algorithm.Request import VMRequest, NewVMRequest, HostedVMRequest
@@ -293,6 +294,14 @@ class InputParser:
 
         req_dist = [num_of_type1, num_of_type2, num_of_type3]
         return new_requests, req_dist
+
+    def get_random_new_request(self, **kwargs):
+        print_dist = False
+        net = self._net
+        gateway_router = random.choice(net.get_gateway_routers())
+        request_type = randint(1,3)
+        new_request = self.create_new_request(request_type, gateway_router)
+        return new_request
 
     def get_all_hosted_requests(self) -> List[HostedVMRequest]:
         hosted_requests_dist_file = self._hosted_requests_dist_file
