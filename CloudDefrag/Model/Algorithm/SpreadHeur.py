@@ -154,7 +154,8 @@ class SpreadHeur(Heuristic):
                 for vnf, server in req_vnf_assignments.items():
                     if isinstance(vnf, DummyVirtualMachine):
                         if isinstance(server, Router):
-                            server.remove_dummy_vm(vnf)
+                            if vnf in server.hosted_dummy_vms:
+                                server.remove_dummy_vm(vnf)
                         continue
                     else:
                         server.remove_virtual_machine(vnf)

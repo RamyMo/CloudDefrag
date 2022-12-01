@@ -2,11 +2,12 @@ import math
 from abc import ABC
 from typing import List
 
+import networkx as nx
+
 from CloudDefrag.Model.Graph.EnhancedGraph import EnhancedGraph
 from CloudDefrag.Model.Graph.Link import Link, PhysicalLink, VirtualLink
 from CloudDefrag.Model.Graph.Node import Node, Server, Router, VirtualMachine, DummyVirtualMachine
 from CloudDefrag.Logging.Logger import Logger
-
 
 
 class Network(EnhancedGraph, ABC):
@@ -81,6 +82,8 @@ class PhysicalNetwork(Network):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         Logger.log.info(f"Created physical network {self.name}")
+        self._max_hops_for_connectivity = kwargs["max_hops_for_connectivity"] if "max_hops_for_connectivity" \
+                                                                                 in kwargs else 1
 
     @property
     def compute_index(self):
@@ -124,7 +127,40 @@ class PhysicalNetwork(Network):
                     routers.append(node)
         return routers
 
+    def compute_gateway_connectivity(self):
+        # Compute connectivity for each gateway router and then return the sum of gw connectivities
+        total_connectivity = 0
+        for gw in self.get_gateway_routers():
+            neighbours = gw.get_neighbours(self, self._max_hops_for_connectivity)
+            gateway_connectivity = 0
+            num_of_servers = 0
+            for n in neighbours:
+                if isinstance(n, Server):
+                    num_of_servers += 1
+                    bw_residuals = []
+                    path_from_gw_to_server = self.get_shorted_path_between_two_nodes_as_edges(gw, n)
+                    for link in path_from_gw_to_server:
+                        bw_residuals.append(link.residual_bw_ratio)
+                    min_bw_residual = min(bw_residuals)
+                    gateway_connectivity += min_bw_residual * n.residual_cpu_ratio
+                    # TODO: include other residuals in gateway connectivity calculations
 
+            gateway_connectivity = gateway_connectivity / num_of_servers
+            total_connectivity += gateway_connectivity
+            gw.gateway_connectivity = gateway_connectivity
+
+        return total_connectivity
+
+    def get_shorted_path_between_two_nodes_as_edges(self, source, target):
+        path = nx.shortest_path(self, source=source, target=target, weight="weight")
+        number_of_edges = len(path) - 1
+        edges = []
+        for i in range(number_of_edges):
+            source_node = path[i]
+            target_node = path[i + 1]
+            edge = self[source_node][target_node]["object"]
+            edges.append(edge)
+        return edges
 
 
 class VirtualNetwork(Network):

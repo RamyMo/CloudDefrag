@@ -178,6 +178,15 @@ class PhysicalLink(Link):
     def link_cost_coefficient(self, value):
         self._link_cost_coefficient = value
 
+    @property
+    def residual_bw_ratio(self):
+        available_bw = self.link_specs.available_bandwidth
+        total_bw = self.link_specs.bandwidth
+        if total_bw == 0:
+            return 0
+        ratio = available_bw / total_bw
+        return ratio
+
     def add_virtual_link(self, vLink: Link):
         virtual_link_bw = vLink.link_specs.bandwidth
         virtual_link_prob_delay = vLink.link_specs.propagation_delay
@@ -213,6 +222,7 @@ class PhysicalLink(Link):
                             f" MBs, Prop. Delay = {self.link_specs.propagation_delay} s")
         else:
             Logger.log.warning(f"Virtual Link {vLink.name} is not hosted by Physical Link {self.name}.")
+
 
 
 class VirtualLink(Link):

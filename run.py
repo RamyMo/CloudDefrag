@@ -16,6 +16,7 @@ from CloudDefrag.Model.Graph.Specs import Specs
 from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
 import matplotlib.pyplot as plt
 import networkx as nx
+from CloudDefrag.DQN.Env import Env
 
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
@@ -26,10 +27,22 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 # TODO: Improve Network Visualization
 
 def main():
-    my_sim = Simulator(number_of_requests=100)
-    my_sim.algorithm_name = "BinpackHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
-    my_sim.start()
-    my_sim.result.print_simulation_result()
+    # #Test DQN Env
+    test_env = Env()
+    test_env.step(0)
+    test_env.step(0)
+    test_env.step(0)
+    test_env.step(0)
+    test_env.step(0)
+
+
+
+
+
+    # my_sim = Simulator(number_of_requests=100)
+    # my_sim.algorithm_name = "BinpackHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
+    # my_sim.start()
+    # my_sim.result.print_simulation_result()
 
 
     # # Input Parameters
@@ -55,11 +68,11 @@ def main():
     # # Draw the network topology
     # net_visual = NetworkVisualizer(net)
     # net_visual.plot()
-
-
-
     #
-    # for i in range(10):
+    #
+    #
+    #
+    # for i in range(1):
     #     # Create the requests
     #     hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
     #

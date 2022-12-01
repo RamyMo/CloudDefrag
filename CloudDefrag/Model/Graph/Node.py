@@ -16,7 +16,7 @@ class Node(ABC):
         self._node_name = kwargs["node_name"] if "node_name" in kwargs else None
         self._node_label = kwargs["node_label"] if "node_label" in kwargs else None
         self._weight = kwargs["weight"] if "weight" in kwargs else None
-        self._is_selected_for_feas_repair = False   # True if the node is selected by feas repair method
+        self._is_selected_for_feas_repair = False  # True if the node is selected by feas repair method
         self._repair_specs = Specs(cpu=0, memory=0, storage=0)
 
     @property
@@ -84,6 +84,21 @@ class PhysicalNode(Node, ABC):
     def server_cost_coefficient(self, value: float):
         self._server_cost_coefficient = value
 
+    def get_neighbours(self, net, max_hops):
+        neighbours = []
+        for i in range(1, max_hops+1):
+            neighbours.extend(list(filter((self).__ne__, find_node_neighbours(self, net, i))))
+        neighbours = list(dict.fromkeys(neighbours))
+        return neighbours
+
+
+def find_node_neighbours(node, net, max_hops):
+    if max_hops == 0:
+        return [node]
+    neighbours = []
+    for neighbour in net.neighbors(node):
+        neighbours.extend(find_node_neighbours(neighbour, net, max_hops - 1))
+    return neighbours
 
 class Server(PhysicalNode):
 
@@ -181,10 +196,38 @@ class Server(PhysicalNode):
         available_storage = self.specs.storage - self.used_specs.storage
         return Specs(cpu=available_cpu, memory=available_memory, storage=available_storage)
 
-    #TODO: Design server_cost_coefficient
+    # TODO: Design server_cost_coefficient
     @property
     def server_cost_coefficient(self) -> float:
         return 1.0
+
+    # Parameters for RFD
+    @property
+    def residual_cpu_ratio(self):
+        available_cpu = self.available_specs.cpu
+        total_cpu = self.specs.cpu
+        if total_cpu == 0:
+            return 0
+        ratio = available_cpu / total_cpu
+        return ratio
+
+    @property
+    def residual_memory_ratio(self):
+        available_memory = self.available_specs.memory
+        total_memory = self.specs.memory
+        if total_memory == 0:
+            return 0
+        ratio = available_memory / total_memory
+        return ratio
+
+    @property
+    def residual_storage_ratio(self):
+        available_storage = self.available_specs.storage
+        total_storage = self.specs.storage
+        if total_storage == 0:
+            return 0
+        ratio = available_storage / total_storage
+        return ratio
 
     def can_server_host_vm(self, vm: Node) -> bool:
         required_cpu = vm.specs.cpu
@@ -242,6 +285,7 @@ class Router(PhysicalNode):
         self._type1_requests = []
         self._type2_requests = []
         self._type3_requests = []
+        self._gateway_connectivity = None
         Logger.log.info(f"Created a Router named {self.node_name}")
 
     def __str__(self) -> str:
@@ -275,11 +319,20 @@ class Router(PhysicalNode):
     def type3_requests(self):
         return self._type3_requests
 
+    @property
+    def gateway_connectivity(self):
+        return self._gateway_connectivity
+
+    @gateway_connectivity.setter
+    def gateway_connectivity(self, value):
+        self._gateway_connectivity = value
+
     def add_dummy_vm(self, vm):
         self._hosted_dummy_vms.append(vm)
 
     def remove_dummy_vm(self, vm):
         self._hosted_dummy_vms.remove(vm)
+
     def attach_request_to_gateway_router(self, request, request_type):
         if self.is_gateway:
             if request_type == 1:
@@ -297,6 +350,7 @@ class Router(PhysicalNode):
                 self._type2_requests.remove(request)
             elif request_type == 3:
                 self._type3_requests.remove(request)
+
 
 class Switch(PhysicalNode):
 
