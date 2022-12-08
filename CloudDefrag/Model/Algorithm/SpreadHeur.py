@@ -124,7 +124,7 @@ class SpreadHeur(Heuristic):
                     provided_delay = 0
                     for pl in shortest_physical_path:
                         provided_delay += pl.link_specs.propagation_delay
-                        if bw_req > pl.link_specs.bandwidth:
+                        if bw_req > pl.link_specs.available_bandwidth:
                             failed_request_assign = True
                     if provided_delay > delay_req:
                         failed_request_assign = True

@@ -1,9 +1,9 @@
 Name,Label,Type,CPU core,RAM GB,Storage GB,isGateway?,Weight
 s1,server,Server,0,0,0,0,0
-s2,server,Server,15,15,1500,0,0
+s2,server,Server,150,150,15000,0,0
 s3,server,Server,0,0,0,0,0
-s4,server,Server,10,10,1000,0,0
-s5,server,Server,20,20,2000,0,0
+s4,server,Server,100,100,10000,0,0
+s5,server,Server,200,200,20000,0,0
 s6,server,Server,0,0,0,0,0
 s7,server,Server,0,0,0,0,0
 s8,server,Server,0,0,0,0,0

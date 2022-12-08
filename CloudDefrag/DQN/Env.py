@@ -13,21 +13,25 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer
 
 
 class Actions(Enum):
-    DO_NOTHING = 0  # A0
-    BIN_PACK = 1  # A1
-    SPREAD = 2  # A2
+    BIN_PACK = 0  # A0
+    SPREAD = 1  # A1
+    DO_NOTHING = 2  # A2
+
+
 
 
 class Env:
 
     def __init__(self, **kwargs) -> None:
 
-        self.show_comments = True
+        self.show_comments = False
 
         self._current_state = None
         self._input_parser = None
         self._net = None
         self._network_topology = kwargs["network_topology"] if "network_topology" in kwargs else "Reduced"
+        self.max_hops_for_connectivity = kwargs["max_hops_for_connectivity"] if "max_hops_for_connectivity" in kwargs\
+            else 1
 
         # Requests
         self._hosted_requests = None
@@ -36,6 +40,7 @@ class Env:
         self._current_request = None
         self.requests_allocated_so_far = None
         self.request_index = None
+        self.number_of_requests = None
 
         # Time
         self.current_time_step = 0
@@ -50,6 +55,8 @@ class Env:
 
         # Rewards
         self._initial_reward = self._net.compute_gateway_connectivity()
+        self.score = 0  # Num of successful allocations
+        self.allocate_all_reward_factor = 10
 
     @property
     def is_done(self):
@@ -82,14 +89,25 @@ class Env:
     def new_requests(self, value):
         self._new_requests = value
 
+    @property
+    def action_space_size(self):
+        return self._action_space_size
+
+    @property
+    def state_vector_size(self):
+        return self._state_vector_size
+
     def reset(self):
         # Create the network
-        self.net, self._input_parser = create_network(f"Net_DQN_ENV_Ep{self.current_episode}", self._network_topology)
+        self.net, self._input_parser = create_network(f"Net_DQN_ENV_Ep{self.current_episode}", self._network_topology,
+                                                      self.max_hops_for_connectivity)
 
         # Create Requests
         make_random_new_requests = False
         self._hosted_requests, self.new_requests = create_requests(self._input_parser, make_random_new_requests)
         self._input_parser.assign_hosted_requests()
+        if self.number_of_requests is None:
+            self.number_of_requests = len(self.new_requests)
 
         self.requests_allocated_so_far = 0
         self.request_index = 0
@@ -107,16 +125,19 @@ class Env:
         self.current_state = initial_state
         if self.show_comments:
             print("Did reset!")
+
+        self.score = 0
         return initial_state
 
     def get_random_action(self):
         return np.random.randint(0, self._action_space_size)
 
-    def step(self, action: int):
+    def step(self, action_as_list):
+        action = np.argmax(action_as_list)
         new_state = None
         reward = 0  # Initial value for reward
         if self.show_comments:
-            print(f"Request: {self.request_index+1}")
+            print(f"Request: {self.request_index + 1}")
 
         if action == 0:  # A0: Bin-Pack
             if self.show_comments:
@@ -125,10 +146,12 @@ class Env:
             heur.solve(display_result=False)
 
             if heur.heuristic_result.is_success:
+                self.score += 1
                 if self.show_comments:
                     print("Allocated request!")
-                heur.display_result()
-                reward += self._net.compute_gateway_connectivity()
+                if self.show_comments:
+                    heur.display_result()
+                reward += self._net.compute_gateway_connectivity()*100
                 self.requests_allocated_so_far += 1
                 # if self.requests_allocated_so_far == self.number_of_requests:
                 #     reward += self._allocate_all_reward
@@ -137,25 +160,25 @@ class Env:
                     print("Failed Allocation!")
                 # reward -= self._blocked_penalty
 
-
-
             new_state = self.__get_state_vector()
 
         elif action == 1:  # A1: Spread
+            self.score += 1
             if self.show_comments:
                 print("Take action Spread!")
             heur = SpreadHeur(self._net, [self._current_request], self._hosted_requests, model_name=f"Spread")
             heur.solve(display_result=False)
             if heur.heuristic_result.is_success:
-                heur.display_result()
-                reward += self._net.compute_gateway_connectivity()
+                if self.show_comments:
+                    heur.display_result()
+                reward += self._net.compute_gateway_connectivity()*100
                 self.requests_allocated_so_far += 1
                 if self.show_comments:
                     print("Allocated request!")
                 # if self.requests_allocated_so_far == self.number_of_requests:
                 #     reward += self._allocate_all_reward
             else:
-            #     reward -= self._blocked_penalty
+                #     reward -= self._blocked_penalty
                 if self.show_comments:
                     print("Failed Allocation!")
             new_state = self.__get_state_vector()
@@ -178,13 +201,16 @@ class Env:
             done = True
             if self.show_comments:
                 print(f"Done with all requests: {reward}")
+            # If requests_allocated_so_far == number_of_requests: 10x reward
+            if self.requests_allocated_so_far == self.number_of_requests:
+                reward = reward * self.allocate_all_reward_factor
         else:
             done = False
             self._current_request = self.new_requests[0]
 
         self.current_state = new_state
 
-        return new_state, reward, done
+        return new_state, reward, done, self.score
 
     def __get_state_vector(self):
         state_vector = []
@@ -204,8 +230,8 @@ class Env:
         return state_vector
 
 
-def create_network(network_name, network_topology):
-    net = PhysicalNetwork(name=network_name)
+def create_network(network_name, network_topology, max_hops_for_connectivity):
+    net = PhysicalNetwork(name=network_name, max_hops_for_connectivity=max_hops_for_connectivity)
     if network_topology == "Reduced":
         network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
         network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"

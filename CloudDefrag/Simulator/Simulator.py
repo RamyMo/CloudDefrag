@@ -133,7 +133,9 @@ class Simulator:
             interarrival = random.expovariate(self.arrival_rate)
             yield self._env.timeout(interarrival)
             count += 1
-            new_req = self.input_parser.get_random_new_request()
+            # new_req = self.input_parser.get_random_new_request()
+            gateway_router = gateway_router = self.net.get_node_dict()["w3"]
+            new_req = self.input_parser.create_new_request(1, gateway_router)
             print(f'Request# {new_req.request_id}, Type: {new_req.request_type}'
                   f' Gateway: {new_req.gateway_router.node_name} arrives at time {self._env.now:5.2f}')
 
