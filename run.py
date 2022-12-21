@@ -36,28 +36,31 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 
 
 def main():
-    max_hops_for_connectivity = 2
+    train_model = False
+    test_model = not train_model
+
+    # Frag. settings
+    max_hops_for_connectivity = 1
+
     # #Test DQN Env
     game = Env(max_hops_for_connectivity=max_hops_for_connectivity)
     agent = Agent(game)
-    train(game, agent)
-    # print("Done Training")
 
-    # Load Model
-    # trained_model_folder_path = './output/DQN/model/model.pth'
-    # trained_model = Linear_QNet(game.state_vector_size, 256, game.action_space_size)
-    # trained_model.load_state_dict(torch.load(trained_model_folder_path))
-    # test_dqn_model(trained_model, max_hops_for_connectivity)
+    if train_model:
+        train(game, agent)
+        print("Done Training")
 
-
-
-
+    if test_model:
+        # Load Trained Model
+        trained_model_folder_path = './output/DQN/model/model.pth'
+        trained_model = Linear_QNet(game.state_vector_size, 256, game.action_space_size)
+        trained_model.load_state_dict(torch.load(trained_model_folder_path))
+        test_dqn_model(trained_model, max_hops_for_connectivity)
 
     # my_sim = Simulator(number_of_requests=50)
     # my_sim.algorithm_name = "BinpackHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
     # my_sim.start()
     # my_sim.result.print_simulation_result()
-
 
     # # Input Parameters
     # make_random_new_requests = False
@@ -206,28 +209,30 @@ def feasibility_restoration(algorithm_instance, grouping_method, algorithm_name,
             out_parser = OutputParser(net, hosted_requests, new_requests)
             out_parser.parse_request_assignments()
 
+
 def get_state_vector(net, request):
-        state_vector = []
-        # Compute nodes information
-        for node in net.get_servers():
-            state_vector.append(node.available_specs.cpu)
-            state_vector.append(node.available_specs.memory)
-            state_vector.append(node.available_specs.storage)
-        # Links information
-        for link in net.get_links():
-            state_vector.append(link.link_specs.available_bandwidth)
-            state_vector.append(link.link_specs.propagation_delay)
-        # Request information
-        state_vector.append(request.request_type)
-        gateway_name = request.gateway_router.node_name
-        state_vector.append(int(re.search('w(.+?)', gateway_name).group(1)))
-        return state_vector
+    state_vector = []
+    # Compute nodes information
+    for node in net.get_servers():
+        state_vector.append(node.available_specs.cpu)
+        state_vector.append(node.available_specs.memory)
+        state_vector.append(node.available_specs.storage)
+    # Links information
+    for link in net.get_links():
+        state_vector.append(link.link_specs.available_bandwidth)
+        state_vector.append(link.link_specs.propagation_delay)
+    # Request information
+    state_vector.append(request.request_type)
+    gateway_name = request.gateway_router.node_name
+    state_vector.append(int(re.search('w(.+?)', gateway_name).group(1)))
+    return state_vector
+
 
 def test_dqn_model(trained_model, max_hops_for_connectivity):
-
     # Input Parameters
     make_random_new_requests = False
-    algorithm_names= ["BinpackHeur", "SpreadHeur", "DoNothing"]    # "RamyILP" is not included
+    algorithm_names = ["BinpackHeur", "SpreadHeur", "DoNothing", "RamyILP"]  # "RamyILP" is not included
+    algorithms_dist_dict = {"BinpackHeur": 0, "SpreadHeur": 0, "DoNothing": 0, "RamyILP": 0}
     # algorithm_name = [2]  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
     network_topology = "Reduced"  # "Reduced" or "Regional"
 
@@ -237,31 +242,40 @@ def test_dqn_model(trained_model, max_hops_for_connectivity):
     # Apply the placement of the hosted requests (if any)
     input_parser.assign_hosted_requests()
 
+    # # Draw the network topology
+    net_visual = NetworkVisualizer(net)
+    net_visual.interactive_visual()
+
     number_of_success = 0
     number_of_requests = len(new_requests)
     for req in new_requests:
+        # Generate State
         state = get_state_vector(net, req)
         state = state / np.linalg.norm(state)
         state = np.array(state)
         state = torch.tensor(state, dtype=torch.float)
+        # Get Action Prediction
         prediction = trained_model(state)
+        # Get Action Index
         action_index = torch.argmax(prediction).item()
-        if action_index == 2:   #Do Nothing Action
+        if action_index == 2:  # Do Nothing Action
             continue
+        # Choose algorithm selected by the action
         algorithm_name = algorithm_names[action_index]
-
-
-        # VNF Placement
+        algorithms_dist_dict[algorithm_name] += 1
+        # Apply VNF Placement
         algo = get_algorithm(net, [req], hosted_requests, algorithm_name)
 
         # Solve the formulated problem
         algo.solve(display_result=False, print_decision_variables=True)
-
+        successful_allocation = False
+        # Check if it is heuristic or algorithm
         if isinstance(algo, Heuristic):
             heuristic_result = algo.heuristic_result
             if heuristic_result.is_success:
                 # algo.display_result()
                 number_of_success += 1
+                successful_allocation = True
             else:
                 print("Heuristic failed")
 
@@ -270,14 +284,17 @@ def test_dqn_model(trained_model, max_hops_for_connectivity):
             if algo.isFeasible:
                 algo.apply_result()
                 number_of_success += 1
+                successful_allocation = True
             else:
                 print("Model is Infeasible: Algorithm failed")
 
-
+        if successful_allocation:
+            net_visual.interactive_visual()
         print("Done")
+
     acceptance_ratio = number_of_success / number_of_requests
     print(f"Acceptance Ratio is {acceptance_ratio * 100}%")
-
+    print(algorithms_dist_dict)
 
 if __name__ == '__main__':
     main()

@@ -5,6 +5,7 @@ import re
 from enum import Enum
 
 from CloudDefrag.Model.Algorithm.BinpackHeur import BinpackHeur
+from CloudDefrag.Model.Algorithm.RamyILP import RamyILP
 from CloudDefrag.Model.Algorithm.SpreadHeur import SpreadHeur
 from CloudDefrag.Model.Graph.Network import PhysicalNetwork
 from CloudDefrag.Parsing.InputParser import InputParser
@@ -15,9 +16,8 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer
 class Actions(Enum):
     BIN_PACK = 0  # A0
     SPREAD = 1  # A1
-    DO_NOTHING = 2  # A2
-
-
+    DO_NOTHING = 2  # A2.
+    ILP = 3  # A3
 
 
 class Env:
@@ -30,7 +30,7 @@ class Env:
         self._input_parser = None
         self._net = None
         self._network_topology = kwargs["network_topology"] if "network_topology" in kwargs else "Reduced"
-        self.max_hops_for_connectivity = kwargs["max_hops_for_connectivity"] if "max_hops_for_connectivity" in kwargs\
+        self.max_hops_for_connectivity = kwargs["max_hops_for_connectivity"] if "max_hops_for_connectivity" in kwargs \
             else 1
 
         # Requests
@@ -56,7 +56,9 @@ class Env:
         # Rewards
         self._initial_reward = self._net.compute_gateway_connectivity()
         self.score = 0  # Num of successful allocations
-        self.allocate_all_reward_factor = 10
+        self.allocate_all_reward_factor = 1000
+        self._blocked_penalty = 100
+        self._do_nothing_penalty = 100
 
     @property
     def is_done(self):
@@ -149,36 +151,36 @@ class Env:
                 self.score += 1
                 if self.show_comments:
                     print("Allocated request!")
-                if self.show_comments:
                     heur.display_result()
-                reward += self._net.compute_gateway_connectivity()*100
                 self.requests_allocated_so_far += 1
+                reward += self._net.compute_gateway_connectivity() * 100 * self.requests_allocated_so_far
+
                 # if self.requests_allocated_so_far == self.number_of_requests:
                 #     reward += self._allocate_all_reward
             else:
                 if self.show_comments:
                     print("Failed Allocation!")
-                # reward -= self._blocked_penalty
+                reward -= self._blocked_penalty
 
             new_state = self.__get_state_vector()
 
         elif action == 1:  # A1: Spread
-            self.score += 1
             if self.show_comments:
                 print("Take action Spread!")
             heur = SpreadHeur(self._net, [self._current_request], self._hosted_requests, model_name=f"Spread")
             heur.solve(display_result=False)
             if heur.heuristic_result.is_success:
+                self.score += 1
+                self.requests_allocated_so_far += 1
                 if self.show_comments:
                     heur.display_result()
-                reward += self._net.compute_gateway_connectivity()*100
-                self.requests_allocated_so_far += 1
+                reward += self._net.compute_gateway_connectivity() * 100 * self.requests_allocated_so_far
                 if self.show_comments:
                     print("Allocated request!")
                 # if self.requests_allocated_so_far == self.number_of_requests:
                 #     reward += self._allocate_all_reward
             else:
-                #     reward -= self._blocked_penalty
+                reward -= self._blocked_penalty
                 if self.show_comments:
                     print("Failed Allocation!")
             new_state = self.__get_state_vector()
@@ -187,7 +189,28 @@ class Env:
             if self.show_comments:
                 print("Take action DoNothing!")
             new_state = self.current_state
-            # reward -= self._do_nothing_penalty
+            reward -= self._do_nothing_penalty
+
+
+        elif action == 3:  # A3: RamyILP
+            if self.show_comments:
+                print("Take action ILP!")
+            algo = RamyILP(self._net, [self._current_request], self._hosted_requests, model_name="ILP")
+            algo.solve(display_result=False)
+            if algo.isFeasible:
+                self.score += 1
+                if self.show_comments:
+                    algo.display_result()
+                algo.apply_result()
+                reward += self._net.compute_gateway_connectivity() * 100 * self.requests_allocated_so_far
+                self.requests_allocated_so_far += 1
+                if self.show_comments:
+                    print("Allocated request!")
+            else:
+                reward -= self._blocked_penalty
+                if self.show_comments:
+                    print("Failed Allocation!")
+            new_state = self.__get_state_vector()
 
         if self.show_comments:
             print(f"Reward: {reward}")

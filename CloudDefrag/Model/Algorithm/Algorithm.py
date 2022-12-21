@@ -149,7 +149,7 @@ class Algorithm(ABC):
                 self.display_result(print_decision_variables=print_decision_variables)
         else:
             Logger.log.info(f"Model {self._model_name} is infeasible")
-            print(f"Model {self._model_name} is infeasible")
+            # print(f"Model {self._model_name} is infeasible")
             self.algorithm_result.is_success = False
 
     # Display Results

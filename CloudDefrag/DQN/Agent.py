@@ -20,7 +20,8 @@ class Agent:
         self.gamma = 0.9  # discount rate
         self.env = env
         self.memory = deque(maxlen=MAX_MEMORY)  # popleft()
-        self.model = Linear_QNet(self.env.state_vector_size, 256, self.env.action_space_size)
+        self.num_of_neurons_per_layer = 256
+        self.model = Linear_QNet(self.env.state_vector_size, self.num_of_neurons_per_layer, self.env.action_space_size)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
 
     def get_state(self):
@@ -49,9 +50,9 @@ class Agent:
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
         self.epsilon = self.num_of_exploration_episodes - self.n_games  #Explore or Exploit
-        final_move = [0, 0, 0]
+        final_move = [0] * self.env.action_space_size
         if random.randint(0, self.num_of_exploration_episodes) < self.epsilon:  #Explore
-            move = random.randint(0, 2)
+            move = np.random.randint(0, self.env.action_space_size)
             final_move[move] = 1
         else:   #Exploit
             state0 = torch.tensor(state, dtype=torch.float)
