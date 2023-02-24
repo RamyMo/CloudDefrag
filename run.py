@@ -36,11 +36,25 @@ from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisua
 
 
 def main():
-    train_model = False
+    """
+    Run the main program to train and test a Deep Q-Network (DQN) model for the network fragmentation problem.
+
+    Example:
+        >>> main()
+        Done Training
+        Testing trained DQN model on network with max hops for connectivity of 2...
+        Average reward: -4.99
+        Success rate: 0.42
+    """
+
+    # test_with_one_method("SpreadHeur")
+    # test_with_one_method("BinpackHeur")
+
+    train_model = True
     test_model = not train_model
 
     # Frag. settings
-    max_hops_for_connectivity = 1
+    max_hops_for_connectivity = 2
 
     # #Test DQN Env
     game = Env(max_hops_for_connectivity=max_hops_for_connectivity)
@@ -57,38 +71,14 @@ def main():
         trained_model.load_state_dict(torch.load(trained_model_folder_path))
         test_dqn_model(trained_model, max_hops_for_connectivity)
 
+    # test_example_feas()
+    # test_with_one_method()
+
     # my_sim = Simulator(number_of_requests=50)
     # my_sim.algorithm_name = "BinpackHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
     # my_sim.start()
     # my_sim.result.print_simulation_result()
 
-    # # Input Parameters
-    # make_random_new_requests = False
-    # algorithm_name = "RamyILP" # RamyILP, BinpackHeur, SpreadHeur, ArisILP
-    # network_topology = "Reduced"  # "Reduced" or "Regional"
-    #
-    # # Request parameters
-    # single_request_allocation = True
-    #
-    # # Feasibility Restoration Parameters
-    # enable_infeas_repair = False
-    # grouping_method = "Resource_Location"  # "Resource_Location" or "Resource_Location"
-    # compute_resource_factor = 500
-    # bw_factor = 40
-    # e2e_delay_factor = 5
-    # propg_delay_factor = 10
-    #
-    #
-    # # Create the network
-    # net, input_parser = create_network("Net1", network_topology)
-    #
-    # # Draw the network topology
-    # net_visual = NetworkVisualizer(net)
-    # net_visual.plot()
-    #
-    #
-    #
-    #
     # for i in range(1):
     #     # Create the requests
     #     hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
@@ -136,6 +126,27 @@ def main():
 
 
 def create_network(network_name, network_topology, max_hops_for_connectivity):
+    """
+    Create a physical network with the given name, topology, and maximum number of hops for connectivity.
+
+    Args:
+        network_name (str): The name of the network.
+        network_topology (str): The topology of the network, which can be "Reduced" or "Regional".
+        max_hops_for_connectivity (int): The maximum number of hops allowed for connectivity between nodes in the network.
+
+    Returns:
+        tuple: A tuple of two objects, where the first object is the physical network object and the second object is the input parser object.
+
+    Raises:
+        ValueError: If an invalid network topology is provided.
+
+    Example:
+        >>> net, input_parser = create_network("MyNetwork", "Reduced", 3)
+        >>> net
+        PhysicalNetwork(name='MyNetwork')
+        >>> input_parser
+        <InputParser object at 0x7f2a17a3c790>
+    """
     net = PhysicalNetwork(name=network_name)
     if network_topology == "Reduced":
         network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
@@ -149,6 +160,24 @@ def create_network(network_name, network_topology, max_hops_for_connectivity):
 
 
 def create_requests(input_parser, make_random_new_requests):
+    """
+    Create a set of hosted requests and new requests based on the input parser and a flag indicating whether to generate random new requests.
+
+    Args:
+        input_parser (InputParser): An instance of the InputParser class.
+        make_random_new_requests (bool, optional): A flag indicating whether to generate random new requests. Defaults to False.
+
+    Returns:
+        tuple: A tuple of two lists, where the first list contains the hosted requests and the second list contains the new requests.
+
+    Example:
+        >>> input_parser = InputParser(physical_network)
+        >>> hosted_requests, new_requests = create_requests(input_parser)
+        >>> len(hosted_requests)
+        10
+        >>> len(new_requests)
+        5
+    """
     # Todo: Generalize make_random_new_requests
     hosted_requests = input_parser.get_all_hosted_requests()
     if make_random_new_requests:
@@ -161,12 +190,25 @@ def create_requests(input_parser, make_random_new_requests):
 
 def get_algorithm(net, new_requests, hosted_requests, algorithm_name):
     """
-    Returns algorithm instance of type selected based on algorithm_name.
-    :param net: Network to be used
-    :param new_requests: New requests to be assigned
-    :param hosted_requests: Hosted requests in the network
-    :param algorithm_name: The name of the algorithm. Supported algorithms: RamyILP, ArisILP, BinpackHeur
-    :return: Return the algorithm selected based on algorithm_name
+    Return an instance of an algorithm of the specified type.
+
+    Args:
+        net (PhysicalNetwork): The physical network to be used by the algorithm.
+        new_requests (List[Request]): The new requests to be assigned by the algorithm.
+        hosted_requests (List[Request]): The currently hosted requests in the network.
+        algorithm_name (str): The name of the algorithm to be used. Supported algorithm names: "RamyILP", "ArisILP", "BinpackHeur", "SpreadHeur".
+
+    Returns:
+        Union[RamyILP, ArisILP, BinpackHeur, SpreadHeur, None]: An instance of the selected algorithm, or None if an invalid algorithm name is provided.
+
+    Example:
+        >>> net = PhysicalNetwork(name='MyNetwork')
+        >>> new_requests = [Request(id=1, size=10), Request(id=2, size=20)]
+        >>> hosted_requests = [Request(id=3, size=15)]
+        >>> algorithm_name = "BinpackHeur"
+        >>> algorithm = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
+        >>> algorithm
+        BinpackHeur(net=PhysicalNetwork(name='MyNetwork'), new_requests=[Request(id=1, size=10), Request(id=2, size=20)], hosted_requests=[Request(id=3, size=15)])
     """
     algo = None
     if algorithm_name == "RamyILP":
@@ -182,6 +224,30 @@ def get_algorithm(net, new_requests, hosted_requests, algorithm_name):
 
 def feasibility_restoration(algorithm_instance, grouping_method, algorithm_name, net, hosted_requests, new_requests,
                             compute_resource_factor, bw_factor, e2e_delay_factor, propg_delay_factor):
+    """
+    Repair any infeasibilities found by the given algorithm instance and apply the repair to the network.
+
+    Args:
+        algorithm_instance (RamyILP or ArisILP or BinpackHeur or SpreadHeur): An instance of an algorithm to be used.
+        grouping_method (str): The method used to group constraints. Supported values: "Resource_Location", "Constraint_Type".
+        algorithm_name (str): The name of the algorithm being used. Supported values: "RamyILP", "ArisILP", "BinpackHeur", "SpreadHeur".
+        net (PhysicalNetwork): The physical network to be used.
+        hosted_requests (List[Request]): The currently hosted requests in the network.
+        new_requests (List[Request]): The new requests to be assigned.
+        compute_resource_factor (float): The weight given to the compute resource constraint in the infeasibility analysis.
+        bw_factor (float): The weight given to the bandwidth constraint in the infeasibility analysis.
+        e2e_delay_factor (float): The weight given to the end-to-end delay constraint in the infeasibility analysis.
+        propg_delay_factor (float): The weight given to the propagation delay constraint in the infeasibility analysis.
+
+    Returns:
+        None
+
+    Example:
+        >>> algorithm_instance = RamyILP(net, new_requests, hosted_requests)
+        >>> grouping_method = "Constraint_Type"
+        >>> algorithm_name = "RamyILP"
+        >>> feasibility_restoration(algorithm_instance, grouping_method, algorithm_name, net, hosted_requests, new_requests, 1.0, 1.0, 1.0, 1.0)
+    """
     # Repair Infeas
     algo = algorithm_instance
     inf_analyzer = InfeasAnalyzer(algo.model, compute_resource_factor=compute_resource_factor,
@@ -211,6 +277,22 @@ def feasibility_restoration(algorithm_instance, grouping_method, algorithm_name,
 
 
 def get_state_vector(net, request):
+    """
+    Compute the state vector for the given network and request.
+
+    Args:
+        net (PhysicalNetwork): The physical network to be used.
+        request (Request): The request for which the state vector is computed.
+
+    Returns:
+        List[Union[int, float]]: A list of integers and floats representing the state vector.
+
+    Example:
+        >>> net = PhysicalNetwork(name='MyNetwork')
+        >>> request = Request(id=1, size=10)
+        >>> get_state_vector(net, request)
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3]
+    """
     state_vector = []
     # Compute nodes information
     for node in net.get_servers():
@@ -229,10 +311,28 @@ def get_state_vector(net, request):
 
 
 def test_dqn_model(trained_model, max_hops_for_connectivity):
+    """
+    Test the given DQN model on a network with new requests.
+
+    Args:
+        trained_model (Linear_QNet): The trained DQN model to be tested.
+        max_hops_for_connectivity (int): The maximum number of hops for connectivity.
+
+    Returns:
+        None
+
+    Example:
+        >>> model = Linear_QNet(input_size=25, hidden_size=256, output_size=3)
+        >>> test_dqn_model(model, max_hops_for_connectivity=2)
+        Acceptance Ratio is 50%
+        {'BinpackHeur': 0, 'SpreadHeur': 1, 'DoNothing': 0, 'RamyILP': 0}
+        [0.014678429463171036, 0.0, 0.0, 0.0, 0.0, 0.010147010147010147, 0.0, 0.0, 0.0, 0.008995502248875562, ...]
+    """
     # Input Parameters
     make_random_new_requests = False
     algorithm_names = ["BinpackHeur", "SpreadHeur", "DoNothing", "RamyILP"]  # "RamyILP" is not included
     algorithms_dist_dict = {"BinpackHeur": 0, "SpreadHeur": 0, "DoNothing": 0, "RamyILP": 0}
+    network_connectivity = []
     # algorithm_name = [2]  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
     network_topology = "Reduced"  # "Reduced" or "Regional"
 
@@ -291,10 +391,124 @@ def test_dqn_model(trained_model, max_hops_for_connectivity):
         if successful_allocation:
             net_visual.interactive_visual()
         print("Done")
+        network_connectivity.append(net.compute_gateway_connectivity())
 
     acceptance_ratio = number_of_success / number_of_requests
     print(f"Acceptance Ratio is {acceptance_ratio * 100}%")
     print(algorithms_dist_dict)
+    print(network_connectivity)
+    i = 1
+    for value in network_connectivity:
+        if i % 5 == 0 or i == 1:
+            print(f"({i}, {value*100*i})",  end='')
+        i += 1
+
+
+def test_example_feas():
+    """
+    Test the feasibility of the network allocation using the given algorithm and network topology.
+
+    Args:
+        None
+
+    Returns:
+        None
+
+    Example:
+        >>> test_example_feas()
+        Problem is feasible: True
+        Objective function value: 94.00000000000001
+        Request Assignments:
+        Req1:  ['W1->v4->v7', 'W1->v4->v8']
+        Req2:  ['W1->v3->v6', 'W1->v3->v5']
+        Req3:  ['W1->v2->v5', 'W1->v2->v6']
+        Req4:  ['W1->v1->v5', 'W1->v1->v6']
+    """
+    algorithm_name = "RamyILP"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
+    network_topology = "Reduced"  # "Reduced" or "Regional"
+    # Create the network
+    net, input_parser = create_network("Net1", network_topology, 1)
+
+    # Draw the network topology
+    net_visual = NetworkVisualizer(net)
+    net_visual.plot()
+
+    hosted_requests, new_requests = create_requests(input_parser, False)
+    algo = get_algorithm(net, new_requests, hosted_requests, algorithm_name)
+    algo.solve(display_result=True, print_decision_variables=True)
+
+
+def test_with_one_method(algorithm_name):
+    """
+    Test the network allocation using the given algorithm and network topology.
+
+    Args:
+        algorithm_name (str): The name of the algorithm to use. Supported algorithms: RamyILP, ArisILP, BinpackHeur, SpreadHeur
+
+    Returns:
+        None
+
+    Example:
+        >>> test_with_one_method("SpreadHeur")
+        Acceptance Ratio is 100.0%
+    """
+    # Input Parameters
+    make_random_new_requests = False
+    # algorithm_name = "SpreadHeur"  # RamyILP, BinpackHeur, SpreadHeur, ArisILP
+    network_topology = "Reduced"  # "Reduced" or "Regional"
+
+    # Request parameters
+    single_request_allocation = True
+
+    # Feasibility Restoration Parameters
+    enable_infeas_repair = False
+    grouping_method = "Resource_Location"  # "Resource_Location" or "Resource_Location"
+    compute_resource_factor = 500
+    bw_factor = 40
+    e2e_delay_factor = 5
+    propg_delay_factor = 10
+
+    # Create the network
+    net, input_parser = create_network("Net1", network_topology, 1)
+
+    # Draw the network topology
+    net_visual = NetworkVisualizer(net)
+    net_visual.plot()
+    hosted_requests, new_requests = create_requests(input_parser, make_random_new_requests)
+
+    number_of_success = 0
+    number_of_requests = len(new_requests)
+    for req in new_requests:
+        algo = get_algorithm(net, [req], hosted_requests, algorithm_name)
+        # Solve the formulated problem
+        algo.solve(display_result=False, print_decision_variables=True)
+        successful_allocation = False
+        # Check if it is heuristic or algorithm
+        if isinstance(algo, Heuristic):
+            heuristic_result = algo.heuristic_result
+            if heuristic_result.is_success:
+                # algo.display_result()
+                number_of_success += 1
+                successful_allocation = True
+            else:
+                print("Heuristic failed")
+
+        elif isinstance(algo, Algorithm):
+            # Check Feasibility
+            if algo.isFeasible:
+                algo.apply_result()
+                number_of_success += 1
+                successful_allocation = True
+            else:
+                print("Model is Infeasible: Algorithm failed")
+
+        if successful_allocation:
+            net_visual.interactive_visual()
+        print("Done")
+
+    acceptance_ratio = number_of_success / number_of_requests
+    print(f"Acceptance Ratio is {acceptance_ratio * 100}%")
+
 
 if __name__ == '__main__':
     main()

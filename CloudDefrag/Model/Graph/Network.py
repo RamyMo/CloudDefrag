@@ -148,6 +148,7 @@ class PhysicalNetwork(Network):
             gateway_connectivity = gateway_connectivity / num_of_servers
             total_connectivity += gateway_connectivity
             gw.gateway_connectivity = gateway_connectivity
+            #TODO: May need to use the connectivity of single gateway as a reward instead of their sum
 
         return total_connectivity
 

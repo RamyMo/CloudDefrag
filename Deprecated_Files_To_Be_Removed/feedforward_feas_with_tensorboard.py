@@ -22,7 +22,7 @@ learning_rate = 0.001
 
 
 ############## DATASET ########################
-file_name_train = "output/Datasets/FeasRest_Train_Set1.CSV"
+file_name_train = "../output/Datasets/FeasRest_Train_Set1.CSV"
 file_name_test = "output/Datasets/FeasRest_Test_Set1.CSV"
 
 class FeasRestDataset(Dataset):
@@ -32,7 +32,7 @@ class FeasRestDataset(Dataset):
         self.isTrain = kwargs["Train"] if "Train" in kwargs else False
 
         if self.isTrain:
-            file_name = "output/Datasets/FeasRest_Train_Set1.CSV"
+            file_name = "../output/Datasets/FeasRest_Train_Set1.CSV"
         else:
             file_name = "output/Datasets/FeasRest_Test_Set1.CSV"
 

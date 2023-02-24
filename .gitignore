@@ -107,3 +107,6 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Deprceated Files
+Deprecated_Files_To_Be_Removed

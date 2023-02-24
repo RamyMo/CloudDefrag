@@ -120,8 +120,8 @@ def train(game, agent):
 
             print('Trial', agent.n_games, 'Score', score, 'Record:', record, 'Average Score', mean_score)
 
-            if mean_score > game.number_of_requests - 4:
-                break
+            # if mean_score > game.number_of_requests - 4:
+            #     break
 
 
             # plot_rfds.append(100 - average_game_reward)

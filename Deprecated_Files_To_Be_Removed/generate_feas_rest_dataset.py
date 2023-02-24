@@ -53,8 +53,8 @@ def create_row_dict(selection_class, req_dist, net):
 def main():
     # Create the network
     net = PhysicalNetwork(name="Net1")
-    network_nodes_file = "input/ReducedTopo/01-NetworkNodes.csv"
-    network_connections_file = "input/ReducedTopo/02-NetworkConnections.csv"
+    network_nodes_file = "../input/ReducedTopo/01-NetworkNodes.csv"
+    network_connections_file = "../input/ReducedTopo/02-NetworkConnections.csv"
     input_parser = InputParser(net, network_nodes_file=network_nodes_file,
                                network_connections_file=network_connections_file)
 
@@ -74,7 +74,7 @@ def main():
 
     # Feas Rest Dataset
     if is_train:
-        file_name = "output/Datasets/FeasRest_Train_Set1.CSV"
+        file_name = "../output/Datasets/FeasRest_Train_Set1.CSV"
     else:
         file_name = "output/Datasets/FeasRest_Test_Set1.CSV"
 

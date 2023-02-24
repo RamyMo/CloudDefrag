@@ -56,7 +56,7 @@ class Env:
         # Rewards
         self._initial_reward = self._net.compute_gateway_connectivity()
         self.score = 0  # Num of successful allocations
-        self.allocate_all_reward_factor = 1000
+        self.allocate_all_reward = 1000
         self._blocked_penalty = 100
         self._do_nothing_penalty = 100
 
@@ -202,8 +202,9 @@ class Env:
                 if self.show_comments:
                     algo.display_result()
                 algo.apply_result()
-                reward += self._net.compute_gateway_connectivity() * 100 * self.requests_allocated_so_far
                 self.requests_allocated_so_far += 1
+                reward += self._net.compute_gateway_connectivity() * 100 * self.requests_allocated_so_far
+
                 if self.show_comments:
                     print("Allocated request!")
             else:
@@ -226,7 +227,7 @@ class Env:
                 print(f"Done with all requests: {reward}")
             # If requests_allocated_so_far == number_of_requests: 10x reward
             if self.requests_allocated_so_far == self.number_of_requests:
-                reward = reward * self.allocate_all_reward_factor
+                reward = self.allocate_all_reward
         else:
             done = False
             self._current_request = self.new_requests[0]
