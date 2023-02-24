@@ -10,12 +10,7 @@ This project implements a system for optimizing the placement of virtual network
   <img src="README/CloudDefragLogo.png" alt="Logo">
 </p>
 
-<style>
-p img {
-  display: block;
-  margin: auto;
-}
-</style>
+
 
 
 ## Table of Contents
