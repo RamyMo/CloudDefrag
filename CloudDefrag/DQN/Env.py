@@ -138,6 +138,7 @@ class Env:
         action = np.argmax(action_as_list)
         new_state = None
         reward = 0  # Initial value for reward
+        done = False
         if self.show_comments:
             print(f"Request: {self.request_index + 1}")
 
@@ -161,6 +162,7 @@ class Env:
                 if self.show_comments:
                     print("Failed Allocation!")
                 reward -= self._blocked_penalty
+                done = True
 
             new_state = self.__get_state_vector()
 
@@ -181,6 +183,7 @@ class Env:
                 #     reward += self._allocate_all_reward
             else:
                 reward -= self._blocked_penalty
+                done = True
                 if self.show_comments:
                     print("Failed Allocation!")
             new_state = self.__get_state_vector()
@@ -190,7 +193,7 @@ class Env:
                 print("Take action DoNothing!")
             new_state = self.current_state
             reward -= self._do_nothing_penalty
-
+            done = True
 
         elif action == 3:  # A3: RamyILP
             if self.show_comments:
@@ -209,6 +212,7 @@ class Env:
                     print("Allocated request!")
             else:
                 reward -= self._blocked_penalty
+                done = True
                 if self.show_comments:
                     print("Failed Allocation!")
             new_state = self.__get_state_vector()
@@ -229,7 +233,6 @@ class Env:
             if self.requests_allocated_so_far == self.number_of_requests:
                 reward = self.allocate_all_reward
         else:
-            done = False
             self._current_request = self.new_requests[0]
 
         self.current_state = new_state
