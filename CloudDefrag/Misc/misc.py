@@ -4,6 +4,12 @@ import numpy as np
 import torch
 from CloudDefrag.DQN.Agent import Agent
 from CloudDefrag.DQN.Agent import train
+from CloudDefrag.DQN.Env import Env
+
+from CloudDefrag.DQN_BS3.Agent import Agent as Agent_BS3
+from CloudDefrag.DQN_BS3.Agent import train as train_BS3
+from CloudDefrag.DQN_BS3.Env import VNFEnv
+
 from CloudDefrag.DQN.Model import Linear_QNet
 from CloudDefrag.Model.Algorithm.Algorithm import Algorithm
 from CloudDefrag.Model.Algorithm.ArisILP import ArisILP
@@ -19,7 +25,6 @@ from CloudDefrag.Model.Graph.Specs import Specs
 from CloudDefrag.InfeasAnalysis.InfeasAnalysis import InfeasAnalyzer
 import matplotlib.pyplot as plt
 import networkx as nx
-from CloudDefrag.DQN.Env import Env
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
 from CloudDefrag.Simulator.Simulator import Simulator
