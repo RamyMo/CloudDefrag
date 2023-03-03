@@ -27,8 +27,14 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from CloudDefrag.Parsing.InputParser import InputParser
 from CloudDefrag.Parsing.OutputParser import OutputParser
+from CloudDefrag.Parsing.SNDlibParser import SNDlibParser
 from CloudDefrag.Simulator.Simulator import Simulator
 from CloudDefrag.Visualization.Visualizer import NetworkVisualizer, RequestVisualizer
+from stable_baselines3.common.env_checker import check_env
+import gym
+import time
+import os
+
 
 def create_network(network_name, network_topology, max_hops_for_connectivity):
     """

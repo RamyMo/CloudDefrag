@@ -154,8 +154,7 @@ class VNFEnv(gym.Env):
     def get_random_action(self):
         return np.random.randint(0, self._action_space_size)
 
-    def step(self, action_as_list):
-        action = np.argmax(action_as_list)
+    def step(self, action):
         new_state = None
         reward = 0  # Initial value for reward
         done = False

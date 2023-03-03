@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "gold", "id": "ATLAM5", "label": "ATLAM5", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1845.72, "y": 894.37}, {"color": "gold", "id": "ATLAng", "label": "ATLAng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1791.36, "y": 850.27}, {"color": "gold", "id": "HSTNng", "label": "HSTNng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1303.73, "y": 1122.31}, {"color": "gold", "id": "IPLSng", "label": "IPLSng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1759.26, "y": 527.56}, {"color": "gold", "id": "WASHng", "label": "WASHng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 2203.82, "y": 583.16}, {"color": "gold", "id": "CHINng", "label": "CHINng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1688.33, "y": 395.53}, {"color": "gold", "id": "NYCMng", "label": "NYCMng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 2352.79, "y": 463.58}, {"color": "gold", "id": "DNVRng", "label": "DNVRng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 842.14, "y": 465.72}, {"color": "gold", "id": "KSCYng", "label": "KSCYng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 1251.19, "y": 579.13}, {"color": "gold", "id": "SNVAng", "label": "SNVAng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 13.36, "y": 676.72}, {"color": "gold", "id": "STTLng", "label": "STTLng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 0.0, "y": 0.0}, {"color": "gold", "id": "LOSAng", "label": "LOSAng", "shape": "dot", "size": 20, "title": "[1 CPUs, 1 GB RAM, 1 GB Storage] \n Available: \n [1 CPUs, 1 GB RAM, 1 GB Storage]", "x": 197.15, "y": 876.78}]);
+                  edges = new vis.DataSet([{"color": "black", "from": "ATLAM5", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "ATLAng", "width": 2}, {"color": "black", "from": "ATLAng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "HSTNng", "width": 2}, {"color": "black", "from": "ATLAng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "IPLSng", "width": 2}, {"color": "black", "from": "ATLAng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "WASHng", "width": 2}, {"color": "black", "from": "CHINng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "IPLSng", "width": 2}, {"color": "black", "from": "CHINng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "NYCMng", "width": 2}, {"color": "black", "from": "DNVRng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "KSCYng", "width": 2}, {"color": "black", "from": "DNVRng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "SNVAng", "width": 2}, {"color": "black", "from": "DNVRng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "STTLng", "width": 2}, {"color": "black", "from": "HSTNng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "KSCYng", "width": 2}, {"color": "black", "from": "HSTNng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "LOSAng", "width": 2}, {"color": "black", "from": "IPLSng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "KSCYng", "width": 2}, {"color": "black", "from": "LOSAng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "SNVAng", "width": 2}, {"color": "black", "from": "NYCMng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "WASHng", "width": 2}, {"color": "black", "from": "SNVAng", "title": "[100 Mbps, 1.00e-06 s] \n Available: \n [100 Mbps, 1.00e-06 s]", "to": "STTLng", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"barnesHut": {"avoidOverlap": 1}}, "nodes": {"borderWidth": 7, "borderWidthSelected": 17, "font": {"size": 18}, "shadow": {"enabled": true}, "size": null}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
